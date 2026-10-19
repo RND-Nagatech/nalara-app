@@ -167,6 +167,7 @@ class TutorToolsRepositoryImpl implements TutorToolsRepository {
       tagline: j['tagline'] as String? ?? '',
       footer: j['footer'] as String? ?? '',
       accentColor: j['accentColor'] as String? ?? '#155D49',
+      logoVersion: j['logoVersion'] as String?,
       reminders: j['reminders'] != false,
       progress: j['progress'] != false,
       reports: j['reports'] != false,

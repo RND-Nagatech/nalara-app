@@ -174,18 +174,13 @@ class _ScheduleDetailPageState extends State<ScheduleDetailPage> {
     ),
   );
 
-  Widget _error(String message) => SessionSectionCard(
+  Widget _error(String message) => ErrorNotice(
+    message,
     key: const ValueKey('series-load-error'),
     title: 'Seri jadwal belum dapat dimuat',
-    children: [
-      Text(message, style: SessionDetailStyle.body),
-      const SizedBox(height: 14),
-      FilledButton(
-        key: const ValueKey('series-retry'),
-        onPressed: _refresh,
-        child: const Text('Coba lagi'),
-      ),
-    ],
+    retry: _refresh,
+    retryKey: const ValueKey('series-retry'),
+    padding: EdgeInsets.zero,
   );
 
   Widget _actions(LoadState<Schedule> state, SubmitState submit) {

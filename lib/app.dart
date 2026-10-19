@@ -41,6 +41,10 @@ import 'features/subscription/presentation/subscription_page.dart';
 import 'features/tutor_tools/domain/tutor_tools.dart';
 import 'features/tutor_tools/presentation/tutor_tools_pages.dart';
 import 'shared/network/api_client.dart';
+import 'shared/widgets/nalara_page_header.dart';
+import 'shared/widgets/page_widgets.dart';
+import 'features/teaching_guide/presentation/teaching_guide_page.dart';
+import 'features/account_deletion/presentation/account_deletion_page.dart';
 
 DateTime? _scheduleDate(String? value) {
   if (value == null || !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
@@ -126,7 +130,12 @@ GoRouter buildRouter(
         final checking =
             subscription.accountId != state.teacher?.id ||
             subscription.state.value == null;
-        if (checking && path != '/teacher/subscription') {
+        if (checking &&
+            ![
+              '/teacher/subscription',
+              '/teacher/more',
+              '/teacher/delete-account',
+            ].contains(path)) {
           if (path.startsWith('/teacher/') &&
               !path.startsWith('/teacher/subscription')) {
             pendingRoute = route.uri.toString();
@@ -140,6 +149,9 @@ GoRouter buildRouter(
               '/teacher/subscription/students',
               '/teacher/profile',
               '/teacher/help',
+              '/teacher/getting-started',
+              '/teacher/more',
+              '/teacher/delete-account',
             ].contains(path)) {
           return '/teacher/subscription';
         }
@@ -150,6 +162,9 @@ GoRouter buildRouter(
               '/teacher/subscription/students',
               '/teacher/profile',
               '/teacher/help',
+              '/teacher/getting-started',
+              '/teacher/more',
+              '/teacher/delete-account',
             ].contains(path)) {
           return '/teacher/subscription';
         }
@@ -215,21 +230,21 @@ GoRouter buildRouter(
       }
       return null;
     },
-    errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Halaman tidak ditemukan')),
-      body: Center(
-        child: TextButton(
-          onPressed: () => context.go(
-            auth.state.status == AuthStatus.authenticated
-                ? '/teacher/home'
-                : auth.state.status == AuthStatus.portalAuthenticated &&
-                      auth.state.accessProfile?.role == AppRole.parent
-                ? '/parent/home'
-                : auth.state.status == AuthStatus.portalAuthenticated
-                ? '/student/home'
-                : entry(auth.state),
-          ),
-          child: const Text('Kembali ke beranda'),
+    errorBuilder: (context, state) => NalaraPageScaffold(
+      title: 'Halaman tidak ditemukan',
+      body: ErrorNotice(
+        'Halaman ini belum tersedia atau tautannya sudah berubah.',
+        title: 'Halaman belum tersedia',
+        retryLabel: 'Kembali ke beranda',
+        retry: () => context.go(
+          auth.state.status == AuthStatus.authenticated
+              ? '/teacher/home'
+              : auth.state.status == AuthStatus.portalAuthenticated &&
+                    auth.state.accessProfile?.role == AppRole.parent
+              ? '/parent/home'
+              : auth.state.status == AuthStatus.portalAuthenticated
+              ? '/student/home'
+              : entry(auth.state),
         ),
       ),
     ),
@@ -586,6 +601,14 @@ GoRouter buildRouter(
         builder: (_, _) => const SettingsPage(),
       ),
       GoRoute(path: '/teacher/help', builder: (_, _) => const HelpPage()),
+      GoRoute(
+        path: '/teacher/getting-started',
+        builder: (_, _) => const TeachingGuidePage(),
+      ),
+      GoRoute(
+        path: '/teacher/delete-account',
+        builder: (_, _) => const AccountDeletionPage(),
+      ),
       GoRoute(
         path: '/teacher/materials',
         builder: (_, _) => const ActivitiesPage(),

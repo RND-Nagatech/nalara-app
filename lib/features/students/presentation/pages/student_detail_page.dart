@@ -283,7 +283,7 @@ class _StudentDetailPageState extends State<StudentDetailPage>
           headerSliverBuilder: (context, innerScrolled) => [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
                 child: StudentProfileCard(
                   key: const ValueKey('student-profile-card'),
                   student: data.student,
@@ -329,28 +329,37 @@ class _StudentDetailPageState extends State<StudentDetailPage>
                           context,
                         ),
                       ),
-                      SliverPadding(
-                        padding: EdgeInsets.fromLTRB(
-                          14,
-                          10,
-                          14,
-                          24 + MediaQuery.paddingOf(context).bottom,
+                      if (!state.loading &&
+                          state.error == null &&
+                          _emptySection(tab, data) != null)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: _emptySection(tab, data),
+                        )
+                      else
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            14,
+                            10,
+                            14,
+                            24 + MediaQuery.paddingOf(context).bottom,
+                          ),
+                          sliver: SliverList.list(
+                            children: [
+                              if (state.loading)
+                                const LinearProgressIndicator(),
+                              if (state.error != null)
+                                ErrorNotice(state.error!, retry: _loader.load),
+                              _section(tab, data, submit),
+                              if (tab == StudentDetailTab.plans)
+                                _pager(data.planPage, tab, state.loading),
+                              if (tab == StudentDetailTab.sessions)
+                                _pager(data.lessonPage, tab, state.loading),
+                              if (tab == StudentDetailTab.reports)
+                                _pager(data.reportPage, tab, state.loading),
+                            ],
+                          ),
                         ),
-                        sliver: SliverList.list(
-                          children: [
-                            if (state.loading) const LinearProgressIndicator(),
-                            if (state.error != null)
-                              ErrorNotice(state.error!, retry: _loader.load),
-                            _section(tab, data, submit),
-                            if (tab == StudentDetailTab.plans)
-                              _pager(data.planPage, tab, state.loading),
-                            if (tab == StudentDetailTab.sessions)
-                              _pager(data.lessonPage, tab, state.loading),
-                            if (tab == StudentDetailTab.reports)
-                              _pager(data.reportPage, tab, state.loading),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -360,6 +369,39 @@ class _StudentDetailPageState extends State<StudentDetailPage>
       ),
     ),
   );
+
+  Widget? _emptySection(StudentDetailTab tab, StudentOverview data) {
+    final active = !widget.readOnly && data.student.status == 'active';
+    return switch (tab) {
+      StudentDetailTab.plans when data.plans.isEmpty => EmptyNotice(
+        'Belum ada rencana belajar untuk siswa ini.',
+        imagePath: 'assets/Empty/Empty target.png',
+        action: active
+            ? FilledButton(
+                key: const ValueKey('student-create-plan'),
+                onPressed: () => _open(
+                  '/teacher/targets/new?studentId=${Uri.encodeComponent(data.student.id)}',
+                ),
+                child: const Text('Buat rencana belajar'),
+              )
+            : null,
+      ),
+      StudentDetailTab.sessions when data.lessons.isEmpty => const EmptyNotice(
+        'Belum ada sesi les.',
+        imagePath: 'assets/Empty/Jadwal kosong.png',
+      ),
+      StudentDetailTab.reports when data.reports.isEmpty => const EmptyNotice(
+        'Belum ada laporan sesi.',
+        imagePath: 'assets/Icon/Icon laporan belum selesai.png',
+      ),
+      StudentDetailTab.family when widget.readOnly && data.family == null =>
+        const EmptyNotice(
+          'Data keluarga belum tersedia.',
+          imagePath: 'assets/Empty/Empty Keluarga.png',
+        ),
+      _ => null,
+    };
+  }
 
   Widget _section(
     StudentDetailTab tab,
@@ -412,11 +454,6 @@ class _StudentDetailPageState extends State<StudentDetailPage>
         key: const ValueKey('student-plans-card'),
         title: 'Target & bidang belajar',
         children: [
-          if (data.plans.isEmpty)
-            const Text(
-              'Belum ada rencana belajar untuk siswa ini.',
-              style: StudentDetailStyle.body,
-            ),
           for (final plan in data.plans)
             _related(
               key: ValueKey('student-plan-${plan.id}'),
@@ -440,8 +477,6 @@ class _StudentDetailPageState extends State<StudentDetailPage>
         key: const ValueKey('student-sessions-card'),
         title: 'Riwayat sesi',
         children: [
-          if (data.lessons.isEmpty)
-            const Text('Belum ada sesi les.', style: StudentDetailStyle.body),
           for (final lesson in data.lessons)
             _related(
               key: ValueKey('student-session-${lesson.id}'),
@@ -457,11 +492,6 @@ class _StudentDetailPageState extends State<StudentDetailPage>
         key: const ValueKey('student-reports-card'),
         title: 'Laporan belajar',
         children: [
-          if (data.reports.isEmpty)
-            const Text(
-              'Belum ada laporan sesi.',
-              style: StudentDetailStyle.body,
-            ),
           for (final report in data.reports)
             _related(
               key: ValueKey('student-report-${report.id}'),

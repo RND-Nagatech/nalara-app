@@ -9,6 +9,12 @@ import 'package:nalara/utils/app_theme.dart';
 
 const entries = [
   (
+    id: 'reschedule-requests',
+    title: 'Permintaan jadwal',
+    description: 'Tinjau permintaan perubahan jadwal dari orang tua',
+    route: '/teacher/reschedule-requests',
+  ),
+  (
     id: 'families',
     title: 'Orang Tua & Keluarga',
     description: 'Kelola data orang tua dan anggota keluarga siswa',
@@ -61,6 +67,12 @@ const entries = [
     title: 'Pusat Bantuan',
     description: 'Temukan jawaban atas pertanyaan Anda',
     route: '/teacher/help',
+  ),
+  (
+    id: 'delete-account',
+    title: 'Hapus akun',
+    description: 'Hapus akun dan data kelolaan Anda secara permanen',
+    route: '/teacher/delete-account',
   ),
 ];
 
@@ -156,11 +168,11 @@ void main() {
   }
 
   testWidgets(
-    'nine rounded menu cards show the mockup order and complete descriptions',
+    'rounded menu cards preserve their order and have space below the divider',
     (tester) async {
-      viewport(tester);
+      viewport(tester, const Size(430, 1600));
       await render(tester);
-      expect(find.byType(MoreMenuTile), findsNWidgets(9));
+      expect(find.byType(MoreMenuTile), findsNWidgets(entries.length));
       double previous = -1;
       for (final entry in entries) {
         final card = find.byKey(ValueKey('more-menu-${entry.id}'));
@@ -177,15 +189,40 @@ void main() {
         expect(rect.left, 18);
         expect(rect.width, 394);
         expect(rect.height, greaterThanOrEqualTo(60));
-        if (entry.id == 'families') {
+        if (entry.id == entries.first.id) {
           final divider = tester.getRect(find.byType(Divider));
-          expect(rect.top - divider.bottom, closeTo(14, .01));
+          expect(rect.top, closeTo(divider.bottom + 16, .01));
         }
         previous = rect.bottom;
       }
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('menu inset scrolls away while the viewport meets the divider', (
+    tester,
+  ) async {
+    viewport(tester, const Size(390, 700));
+    await render(tester);
+    final scroll = find.byKey(const PageStorageKey('teacher-more-scroll'));
+    final divider = tester.getRect(find.byType(Divider));
+    final firstCard = find.byKey(ValueKey('more-menu-${entries.first.id}'));
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(of: scroll, matching: find.byType(Scrollable)).first,
+    );
+    expect(tester.getRect(scroll).top, closeTo(divider.bottom, .01));
+    expect(tester.getRect(firstCard).top, closeTo(divider.bottom + 16, .01));
+    scrollable.position.jumpTo(16);
+    await tester.pump();
+    expect(tester.getRect(firstCard).top, closeTo(divider.bottom, .01));
+    expect(tester.getRect(find.byType(Divider)), divider);
+    expect(tester.getRect(scroll).top, closeTo(divider.bottom, .01));
+    await tester.drag(scroll, const Offset(0, -180));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(Divider)), divider);
+    expect(tester.getRect(scroll).top, closeTo(divider.bottom, .01));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'every entire card opens its original route and returns to the menu',

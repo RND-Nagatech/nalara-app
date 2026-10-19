@@ -21,6 +21,8 @@ import 'package:nalara/shared/errors/app_failure.dart';
 import 'package:nalara/utils/app_theme.dart';
 import 'package:nalara/utils/injector.dart';
 import 'home_fixtures.dart';
+import 'package:nalara/features/teaching_guide/presentation/teaching_guide_cubit.dart';
+import 'teaching_guide_fixtures.dart';
 
 class HomeSchedulesFake implements SchedulesRepository {
   final ranges = <({DateTime? from, DateTime? to})>[];
@@ -50,13 +52,25 @@ void main() {
     repository = HomeRepositoryFake(homeOverview());
     getIt.registerFactory(() => DashboardCubit(LoadTeacherHome(repository)));
     getIt.registerFactory(
+      () => TeachingGuideCubit(
+        TeachingGuideFake(
+          guideValue(
+            subject: true,
+            student: true,
+            schedule: true,
+            target: true,
+          ),
+        ),
+      ),
+    );
+    getIt.registerFactory(
       () =>
           ScheduleAgendaCubit(LoadScheduleAgenda(getIt<SchedulesRepository>())),
     );
   });
   tearDown(() async => getIt.reset());
 
-  void viewport(WidgetTester tester, [Size size = const Size(430, 900)]) {
+  void viewport(WidgetTester tester, [Size size = const Size(430, 1200)]) {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = size;
     addTearDown(tester.view.resetPhysicalSize);

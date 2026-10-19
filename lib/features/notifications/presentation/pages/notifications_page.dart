@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/nalara_header.dart';
-import '../../../../shared/widgets/nalara_card_style.dart';
+import '../../../../shared/widgets/nalara_error_notice.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -161,7 +161,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     physics: const AlwaysScrollableScrollPhysics(),
     slivers: [
       const SliverPadding(
-        padding: EdgeInsets.fromLTRB(22, 4, 22, 20),
+        padding: EdgeInsets.fromLTRB(22, 16, 22, 20),
         sliver: SliverToBoxAdapter(
           child: Text(
             'Informasi terbaru seputar aktivitas belajar Anda.',
@@ -183,7 +183,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       else if (state.isEmpty)
         const SliverFillRemaining(
           hasScrollBody: false,
-          child: NotificationsEmptyState(),
+          child: Center(child: NotificationsEmptyState()),
         )
       else if (state.result != null && state.result!.total > 0) ...[
         SliverToBoxAdapter(child: _summary(state)),
@@ -239,36 +239,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     ),
   );
 
-  Widget _error(String error) => Container(
-    margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(19),
-      border: Border.all(color: NalaraCardStyle.border),
-      boxShadow: const [
-        BoxShadow(
-          color: NalaraCardStyle.shadow,
-          blurRadius: 16,
-          offset: Offset(0, 5),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(error, style: NotificationsStyle.body),
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            key: const ValueKey('notifications-retry'),
-            onPressed: _cubit.reload,
-            child: const Text('Coba lagi'),
-          ),
-        ),
-      ],
-    ),
+  Widget _error(String error) => ErrorNotice(
+    error,
+    retry: _cubit.reload,
+    retryKey: const ValueKey('notifications-retry'),
+    compact: _cubit.state.result?.items.isNotEmpty ?? false,
   );
 
   Widget _pagination(NotificationsState state) {

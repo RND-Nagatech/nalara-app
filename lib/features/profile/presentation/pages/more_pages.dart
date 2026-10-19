@@ -17,6 +17,7 @@ class MaterialsPage extends StatelessWidget {
       children: [
         EmptyNotice(
           'Pengelolaan materi terpisah belum tersedia pada versi ini. Anda dapat mencatat tugas dan latihan lanjutan melalui laporan sesi.',
+          imagePath: 'assets/Empty/empty siswa.png',
           action: FilledButton(
             onPressed: () => context.push('/teacher/reports'),
             child: const Text('Buka laporan belajar'),

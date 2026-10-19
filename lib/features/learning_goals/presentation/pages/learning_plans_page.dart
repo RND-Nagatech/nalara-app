@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/domain/page.dart';
 import '../../../../shared/state/teaching_catalog_refresh.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
+import '../../../../shared/widgets/nalara_error_notice.dart';
 import '../../../../utils/injector.dart';
 import '../../domain/entities/learning_goal.dart';
 import '../../domain/repositories/learning_repository.dart';
@@ -154,8 +155,7 @@ class _LearningPlansPageState extends State<LearningPlansPage>
                     else if (state.isEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
-                        child: Align(
-                          alignment: const Alignment(0, -.16),
+                        child: Center(
                           child: LearningPlansEmptyState(
                             onAdd: _add,
                             showAction: !widget.readOnly,
@@ -168,10 +168,13 @@ class _LearningPlansPageState extends State<LearningPlansPage>
                     else if (state.result!.items.isNotEmpty)
                       _plans(state.result!)
                     else if (!state.loading && state.error == null)
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text('Tidak ada rencana pada halaman ini.'),
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: LearningPlansEmptyState(
+                            onAdd: _add,
+                            showAction: !widget.readOnly,
+                          ),
                         ),
                       ),
                     if (state.result != null && state.result!.total > 0)
@@ -243,7 +246,7 @@ class _LearningPlansPageState extends State<LearningPlansPage>
   );
 
   Widget _plans(PageResult<LearningPlan> result) => SliverPadding(
-    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
     sliver: SliverList.builder(
       itemCount: result.items.length,
       itemBuilder: (context, index) {
@@ -273,29 +276,10 @@ class _LearningPlansPageState extends State<LearningPlansPage>
     );
   }
 
-  Widget _error(String message) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(
-          Icons.error_outline_rounded,
-          color: LearningPlansStyle.muted,
-        ),
-        const SizedBox(height: 10),
-        Text(
-          message,
-          textAlign: TextAlign.center,
-          style: LearningPlansStyle.body,
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          key: const ValueKey('target-retry'),
-          onPressed: _cubit.retry,
-          icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Coba lagi'),
-        ),
-      ],
-    ),
+  Widget _error(String message) => ErrorNotice(
+    message,
+    retry: _cubit.retry,
+    retryKey: const ValueKey('target-retry'),
+    compact: _cubit.state.result?.items.isNotEmpty ?? false,
   );
 }

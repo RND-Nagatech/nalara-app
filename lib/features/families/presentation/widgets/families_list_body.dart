@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/domain/page.dart';
 import '../../../../shared/state/load_cubit.dart';
+import '../../../../shared/widgets/nalara_error_notice.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
 import '../../domain/entities/family.dart';
 import 'families_empty_state.dart';
@@ -27,24 +28,11 @@ class FamiliesListBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = state.value;
-    final failure = Padding(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            state.error ?? 'Data keluarga belum dapat dimuat.',
-            textAlign: TextAlign.center,
-            style: FamiliesStyle.body,
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            key: const ValueKey('families-retry'),
-            onPressed: onRetry,
-            child: const Text('Coba lagi'),
-          ),
-        ],
-      ),
+    final failure = ErrorNotice(
+      state.error ?? 'Data keluarga belum dapat dimuat.',
+      retry: onRetry,
+      retryKey: const ValueKey('families-retry'),
+      compact: data?.items.isNotEmpty ?? false,
     );
 
     return RefreshIndicator(
@@ -86,7 +74,7 @@ class FamiliesListBody extends StatelessWidget {
           else ...[
             if (state.error != null) SliverToBoxAdapter(child: failure),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               sliver: SliverList.builder(
                 itemCount: data.items.length * 2 - 1,
                 itemBuilder: (context, index) {

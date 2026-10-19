@@ -12,11 +12,11 @@ class HomeEmptySchedule extends StatelessWidget {
     this.description,
   });
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: const _DashedCardBorder(),
+  Widget build(BuildContext context) => Center(
     child: Padding(
       padding: const EdgeInsets.fromLTRB(22, 28, 22, 30),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 230),
@@ -49,79 +49,51 @@ class HomeEmptySchedule extends StatelessWidget {
           if (showAction) ...[
             const SizedBox(height: 18),
             OutlinedButton(
-            key: const ValueKey('home-create-schedule'),
-            onPressed: onCreate,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: HomeStyle.green,
-              backgroundColor: Colors.transparent,
-              side: const BorderSide(color: HomeStyle.green),
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              minimumSize: const Size(0, 48),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: HomeStyle.green,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(3),
-                    child: Icon(Icons.add, color: Colors.white, size: 19),
-                  ),
+              key: const ValueKey('home-create-schedule'),
+              onPressed: onCreate,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: HomeStyle.green,
+                backgroundColor: Colors.transparent,
+                side: const BorderSide(color: HomeStyle.green),
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
                 ),
-                const SizedBox(width: 10),
-                const Flexible(
-                  child: Text(
-                    'Buat jadwal les',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'NalaraInter',
-                      fontSize: 14,
-                      height: 1.3,
-                      fontWeight: FontWeight.w600,
+                minimumSize: const Size(0, 48),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: HomeStyle.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(3),
+                      child: Icon(Icons.add, color: Colors.white, size: 19),
                     ),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 10),
+                  const Flexible(
+                    child: Text(
+                      'Buat jadwal les',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'NalaraInter',
+                        fontSize: 14,
+                        height: 1.3,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ],
       ),
     ),
   );
-}
-
-class _DashedCardBorder extends CustomPainter {
-  const _DashedCardBorder();
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-    final outline = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          (Offset.zero & size).deflate(.5),
-          const Radius.circular(18),
-        ),
-      );
-    final paint = Paint()
-      ..color = const Color(0xFFD6D3CB)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = .7
-      ..strokeCap = StrokeCap.round;
-    for (final metric in outline.computeMetrics()) {
-      for (double offset = 0; offset < metric.length; offset += 6) {
-        canvas.drawPath(
-          metric.extractPath(offset, (offset + 3).clamp(0, metric.length)),
-          paint,
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedCardBorder oldDelegate) => false;
 }

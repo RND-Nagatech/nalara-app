@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/nalara_dropdown.dart';
+import '../../../../shared/widgets/nalara_empty_state.dart';
 import '../../../lesson_reports/domain/entities/lesson_report.dart';
 import 'session_detail_style.dart';
 
@@ -144,38 +145,39 @@ class SessionReportsCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => SessionSectionCard(
-    title: 'Laporan sesi',
-    description: readOnly
-        ? 'Laporan belajar yang dibagikan oleh Guru untuk sesi ini.'
-        : 'Tulis ringkasan materi, catatan, dan perkembangan siswa.',
-    children: [
-      for (final report in reports)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: SessionActionTile(
-            key: ValueKey('session-report-${report.id}'),
-            label: report.topic,
-            description: statusLabel(report.status),
-            onPressed: onOpen == null ? null : () => onOpen!(report),
-          ),
-        ),
-      if (reports.isEmpty && readOnly)
-        const Text(
-          'Belum ada laporan yang dibagikan untuk sesi ini.',
-          style: SessionDetailStyle.body,
-        ),
-      if (reports.isEmpty && !cancelled && !readOnly)
-        FilledButton(
-          key: const ValueKey('session-create-report'),
-          onPressed: onCreate,
-          child: const Text('Tulis laporan sesi'),
-        ),
-      if (reports.isEmpty && cancelled && !readOnly)
-        const Text(
-          'Belum ada laporan untuk sesi yang dibatalkan ini.',
-          style: SessionDetailStyle.body,
-        ),
-    ],
-  );
+  Widget build(BuildContext context) => reports.isEmpty
+      ? NalaraEmptyState(
+          imagePath: 'assets/Icon/Icon laporan belum selesai.png',
+          title: 'Laporan sesi',
+          message: readOnly
+              ? 'Belum ada laporan yang dibagikan untuk sesi ini.'
+              : cancelled
+              ? 'Belum ada laporan untuk sesi yang dibatalkan ini.'
+              : 'Tulis ringkasan materi, catatan, dan perkembangan siswa.',
+          action: !readOnly && !cancelled
+              ? FilledButton(
+                  key: const ValueKey('session-create-report'),
+                  onPressed: onCreate,
+                  child: const Text('Tulis laporan sesi'),
+                )
+              : null,
+        )
+      : SessionSectionCard(
+          title: 'Laporan sesi',
+          description: readOnly
+              ? 'Laporan belajar yang dibagikan oleh Guru untuk sesi ini.'
+              : 'Tulis ringkasan materi, catatan, dan perkembangan siswa.',
+          children: [
+            for (final report in reports)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SessionActionTile(
+                  key: ValueKey('session-report-${report.id}'),
+                  label: report.topic,
+                  description: statusLabel(report.status),
+                  onPressed: onOpen == null ? null : () => onOpen!(report),
+                ),
+              ),
+          ],
+        );
 }

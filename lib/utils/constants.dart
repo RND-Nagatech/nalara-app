@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 abstract final class ApiConstants {
   static const prefix = '/api/v1';
-  static const androidDevBaseUrl = 'http://192.168.29.241:3100$prefix';
+  static const androidDevBaseUrl = 'http://192.168.100.157:3100$prefix';
   static const iosDevBaseUrl = 'http://localhost:3100$prefix';
   static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
 
@@ -63,6 +63,9 @@ abstract final class ApiConstants {
   static const healthLive = '/health/live';
   static const healthReady = '/health/ready';
   static const dashboard = '/dashboard';
+  static const teachingGuide = '/teaching-guide';
+  static const teachingGuidePreferences = '$teachingGuide/preferences';
+  static const accountDeletion = '/account-deletion';
   static const students = '/students';
   static const families = '/families';
   static const subjects = '/subjects';
@@ -87,6 +90,7 @@ abstract final class ApiConstants {
   static const reportTemplates = '$tutorTools/templates';
   static const progressAnalytics = '$tutorTools/analytics';
   static const tutorBranding = '$tutorTools/branding';
+  static const tutorBrandingLogo = '$tutorBranding/logo';
   static const tutorNotificationPreferences =
       '$tutorTools/notification-preferences';
   static const exportData = '$tutorTools/export';

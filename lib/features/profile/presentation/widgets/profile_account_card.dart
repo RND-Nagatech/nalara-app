@@ -26,23 +26,21 @@ class ProfileAccountCard extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _AccountRow(
-            icon: Icons.mail_outline_rounded,
             label: 'Email',
             value: teacher.email.isEmpty ? 'Belum tersedia' : teacher.email,
           ),
-          const Divider(height: 1, indent: 56, color: ProfileStyle.line),
+          const Divider(height: 1, color: ProfileStyle.line),
           _AccountRow(
-            icon: Icons.phone_outlined,
             label: 'Nomor HP',
             value: teacher.phone?.trim().isNotEmpty == true
                 ? teacher.phone!
                 : 'Belum ditambahkan',
           ),
-          const Divider(height: 1, indent: 56, color: ProfileStyle.line),
+          const Divider(height: 1, color: ProfileStyle.line),
           _AccountRow(
-            icon: Icons.schedule_rounded,
             label: 'Zona waktu',
             value: teacher.timezone.isEmpty
                 ? 'Belum tersedia'
@@ -55,47 +53,23 @@ class ProfileAccountCard extends StatelessWidget {
 }
 
 class _AccountRow extends StatelessWidget {
-  final IconData icon;
   final String label, value;
 
-  const _AccountRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _AccountRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 16),
-    child: Row(
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ExcludeSemantics(
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: ProfileStyle.sage,
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(icon, size: 21, color: ProfileStyle.green),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: ProfileStyle.body.copyWith(fontSize: 12)),
-              const SizedBox(height: 4),
-              SelectableText(
-                value,
-                style: ProfileStyle.body.copyWith(
-                  color: ProfileStyle.ink,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+        Text(label, style: ProfileStyle.body.copyWith(fontSize: 12)),
+        const SizedBox(height: 4),
+        SelectableText(
+          value,
+          style: ProfileStyle.body.copyWith(
+            color: ProfileStyle.ink,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],

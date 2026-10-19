@@ -209,7 +209,7 @@ class _RescheduleRequestsPageState extends State<RescheduleRequestsPage> {
           if (state.actionError != null)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                 child: Text(
                   state.actionError!,
                   style: RescheduleRequestsStyle.body.copyWith(
@@ -228,9 +228,10 @@ class _RescheduleRequestsPageState extends State<RescheduleRequestsPage> {
           else ...[
             if (state.loadError != null)
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: ErrorNotice(state.loadError!, retry: _cubit.retry),
+                child: ErrorNotice(
+                  state.loadError!,
+                  retry: _cubit.retry,
+                  compact: true,
                 ),
               ),
             if (data.items.isEmpty && !state.loading && state.loadError == null)
@@ -243,7 +244,7 @@ class _RescheduleRequestsPageState extends State<RescheduleRequestsPage> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                 sliver: SliverList.builder(
                   itemCount: data.items.length,
                   itemBuilder: (context, index) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/nalara_card_style.dart';
+import '../../../../shared/widgets/nalara_error_notice.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
 import '../../domain/entities/student.dart';
 import '../../domain/entities/student_filter.dart';
@@ -30,20 +31,10 @@ class StudentsTabBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = value.data;
-    final failure = Padding(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value.error ?? '',
-            textAlign: TextAlign.center,
-            style: StudentsStyle.body,
-          ),
-          const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
-        ],
-      ),
+    final failure = ErrorNotice(
+      value.error ?? '',
+      retry: onRetry,
+      compact: data?.items.isNotEmpty ?? false,
     );
     return RefreshIndicator(
       onRefresh: onRefresh,

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/state/load_cubit.dart';
 import '../../../../shared/widgets/nalara_dropdown.dart';
+import '../../../../shared/widgets/nalara_pickers.dart';
 import '../../../../utils/date_time_utils.dart';
 import '../../../../utils/injector.dart';
 import '../../../../utils/validators.dart';
@@ -143,7 +144,7 @@ class _ParentRescheduleSheetState extends State<_ParentRescheduleSheet> {
     setState(() => _pickingDate = true);
     DateTime? selected;
     try {
-      selected = await showDatePicker(
+      selected = await showNalaraDatePicker(
         context: context,
         initialDate: DateTime(initial.year, initial.month, initial.day),
         firstDate: DateTime(today.year, today.month, today.day),

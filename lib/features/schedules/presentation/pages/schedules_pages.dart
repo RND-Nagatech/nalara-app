@@ -521,6 +521,7 @@ class SeriesSessionsPage extends StatelessWidget {
   Widget build(BuildContext context) => PagedListPage<Lesson>(
     title: 'Pertemuan dalam seri',
     empty: 'Tidak ada sesi.',
+    emptyArtwork: 'assets/Empty/Jadwal kosong.png',
     load: (page) =>
         getIt<SchedulesRepository>().sessions(page: page, scheduleId: id),
     itemBuilder: (context, lesson, reload) => LessonCard(

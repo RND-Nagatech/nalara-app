@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../utils/date_time_utils.dart';
+import '../../../../shared/widgets/nalara_pickers.dart';
 import 'plan_form_style.dart';
 
 class PlanPeriodField extends StatelessWidget {
@@ -19,7 +20,7 @@ class PlanPeriodField extends StatelessWidget {
     FocusScope.of(context).unfocus();
     final local = DateTimeUtils.local(value);
     final day = DateTime(local.year, local.month, local.day);
-    final date = await showDatePicker(
+    final date = await showNalaraDatePicker(
       context: context,
       initialDate: day,
       firstDate: day.isBefore(DateTime(2020)) ? day : DateTime(2020),

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/nalara_header.dart';
+import '../../../../shared/widgets/nalara_pickers.dart';
 import '../../../../utils/color.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -115,7 +116,7 @@ class _ScheduleAgendaPageState extends State<ScheduleAgendaPage>
   Future<void> _pick() async {
     final cubit = _cubit;
     final selected = cubit.state.date;
-    final date = await showDatePicker(
+    final date = await showNalaraDatePicker(
       context: context,
       initialDate: DateTime(selected.year, selected.month, selected.day),
       firstDate: DateTime(2020),

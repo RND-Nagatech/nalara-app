@@ -236,6 +236,17 @@ class AuthCubit extends Cubit<AuthState> {
     expire();
   }
 
+  Future<void> finishAccountDeletion(String teacherId) async {
+    if (isClosed || state.teacher?.id != teacherId) return;
+    try {
+      await push?.forgetDeletedAccount();
+    } catch (_) {
+      // Acceptance is authoritative even if clearing OS notifications fails.
+    } finally {
+      if (!isClosed && state.teacher?.id == teacherId) expire();
+    }
+  }
+
   void expire() {
     if (!isClosed && state.status == AuthStatus.authenticated) {
       emit(

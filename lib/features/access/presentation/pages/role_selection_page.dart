@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/nalara_dialog.dart';
+import '../../../../utils/color.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/state/load_cubit.dart';
-import '../../../../shared/widgets/nalara_surface_card.dart';
 import '../../../../utils/injector.dart';
 import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../../../auth/presentation/widgets/auth_palette.dart';
@@ -48,47 +49,40 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                 icon: const Icon(Icons.help_outline, size: 24),
                 onPressed: () => showDialog<void>(
                   context: context,
-                  barrierColor: Colors.black.withValues(alpha: .16),
-                  builder: (context) => Dialog(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: NalaraSurfaceCard(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-                      radius: 20,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Text(
-                            'Pilih peran Anda',
-                            style: TextStyle(
-                              fontFamily: 'NalaraInter',
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              color: AuthPalette.ink,
-                            ),
+                  barrierColor: NalaraColors.scrim,
+                  builder: (context) => NalaraDialog(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Pilih peran Anda',
+                          style: TextStyle(
+                            fontFamily: 'NalaraInter',
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AuthPalette.ink,
                           ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Guru masuk dengan akun. Siswa dan Orang Tua menggunakan kode referral dari Guru. Satu kode Orang Tua menghubungkan semua anak dalam keluarga yang sama.',
-                            style: TextStyle(
-                              fontFamily: 'NalaraInter',
-                              fontSize: 13.5,
-                              height: 1.5,
-                              color: AuthPalette.muted,
-                            ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Guru masuk dengan akun. Siswa dan Orang Tua menggunakan kode referral dari Guru. Satu kode Orang Tua menghubungkan semua anak dalam keluarga yang sama.',
+                          style: TextStyle(
+                            fontFamily: 'NalaraInter',
+                            fontSize: 13.5,
+                            height: 1.5,
+                            color: AuthPalette.muted,
                           ),
-                          const SizedBox(height: 16),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: FilledButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Mengerti'),
-                            ),
+                        ),
+                        const SizedBox(height: 16),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: FilledButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Mengerti'),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

@@ -207,18 +207,19 @@ class HomeRoleHero extends StatelessWidget {
                   // Keep the cards aligned to the measured height when the
                   // labels fit, but let the row grow if text wraps at a
                   // narrow width or a larger accessibility text scale.
-                  // A tight height here makes the metric column overflow.
                   constraints: BoxConstraints(minHeight: cardHeight),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (var index = 0; index < metrics.length; index++) ...[
-                        if (index > 0) const SizedBox(width: gap),
-                        Expanded(
-                          child: _HomeRoleMetricCard(metric: metrics[index]),
-                        ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var index = 0; index < metrics.length; index++) ...[
+                          if (index > 0) const SizedBox(width: gap),
+                          Expanded(
+                            child: _HomeRoleMetricCard(metric: metrics[index]),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),

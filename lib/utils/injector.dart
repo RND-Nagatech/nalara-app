@@ -2,6 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
+import '../features/tutor_tools/domain/branding_logo.dart';
+import '../features/tutor_tools/data/branding_logo_repository_impl.dart';
+import '../features/tutor_tools/presentation/branding_logo_cubit.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import '../shared/network/api_client.dart';
 import '../shared/domain/teaching_catalog_changes.dart';
@@ -78,6 +81,14 @@ import '../features/subscription/presentation/subscription_cubit.dart';
 import '../features/tutor_tools/data/tutor_tools_repository_impl.dart';
 import '../features/tutor_tools/domain/tutor_tools.dart';
 import '../features/tutor_tools/domain/load_tutor_catalog.dart';
+import '../features/teaching_guide/data/teaching_guide_remote_source.dart';
+import '../features/teaching_guide/data/teaching_guide_repository_impl.dart';
+import '../features/teaching_guide/domain/teaching_guide.dart';
+import '../features/teaching_guide/presentation/teaching_guide_cubit.dart';
+import '../features/account_deletion/data/account_deletion_remote_source.dart';
+import '../features/account_deletion/data/account_deletion_repository_impl.dart';
+import '../features/account_deletion/domain/account_deletion.dart';
+import '../features/account_deletion/presentation/account_deletion_cubit.dart';
 
 final getIt = GetIt.instance;
 Future<void> configureDependencies({bool checkInstallation = true}) async {
@@ -136,6 +147,18 @@ Future<void> configureDependencies({bool checkInstallation = true}) async {
   );
   getIt.registerLazySingleton<TutorToolsRepository>(
     () => TutorToolsRepositoryImpl(getIt<TutorToolsRemoteSource>()),
+  );
+  getIt.registerFactory<BrandingLogoRepository>(
+    () => BrandingLogoRepositoryImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<BrandingLogoPicker>(
+    () => FileSelectorBrandingLogoPicker(),
+  );
+  getIt.registerFactory(
+    () => BrandingLogoCubit(
+      getIt<BrandingLogoRepository>(),
+      getIt<BrandingLogoPicker>(),
+    ),
   );
   getIt.registerLazySingleton(
     () => LoadTutorCatalog(
@@ -315,6 +338,29 @@ Future<void> configureDependencies({bool checkInstallation = true}) async {
     () => LoadTeacherHome(getIt<DashboardRepository>()),
   );
   getIt.registerFactory(() => DashboardCubit(getIt<LoadTeacherHome>()));
+  getIt.registerLazySingleton(
+    () => TeachingGuideRemoteSource(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<TeachingGuideRepository>(
+    () => TeachingGuideRepositoryImpl(getIt<TeachingGuideRemoteSource>()),
+  );
+  getIt.registerFactory(
+    () => TeachingGuideCubit(getIt<TeachingGuideRepository>()),
+  );
+  getIt.registerLazySingleton(
+    () => AccountDeletionRemoteSource(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<AccountDeletionRepository>(
+    () => AccountDeletionRepositoryImpl(
+      getIt<AccountDeletionRemoteSource>(),
+      getIt<TokenStore>(),
+      getIt<RememberedLoginLocalSource>(),
+      getIt<GoogleAuthService>(),
+    ),
+  );
+  getIt.registerFactory(
+    () => AccountDeletionCubit(getIt<AccountDeletionRepository>()),
+  );
   getIt.registerLazySingleton(
     () => UpdateProgress(getIt<LearningRepository>()),
   );

@@ -539,6 +539,7 @@ class _FamilyDetailPageState extends State<FamilyDetailPage> {
         if (data.family.children.isEmpty)
           const EmptyNotice(
             'Hubungkan anak terlebih dahulu melalui Edit Orang Tua & anak atau profil siswa.',
+            imagePath: 'assets/Empty/Empty Keluarga.png',
           ),
         for (final child in data.family.children)
           Padding(

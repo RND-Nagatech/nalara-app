@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../utils/date_time_utils.dart';
+import '../../utils/color.dart';
+import 'nalara_pickers.dart';
 
 class FormFieldSpace extends StatelessWidget {
   final Widget child;
@@ -26,10 +28,10 @@ class DateTimeField extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => FormFieldSpace(
-    child: OutlinedButton.icon(
+    child: OutlinedButton(
       onPressed: () async {
         final local = DateTimeUtils.local(value, timezone);
-        final date = await showDatePicker(
+        final date = await showNalaraDatePicker(
           context: context,
           initialDate: local,
           firstDate: DateTime(2020),
@@ -37,20 +39,44 @@ class DateTimeField extends StatelessWidget {
         );
         if (date == null || !context.mounted) return;
         final time = withTime
-            ? await showTimePicker(
+            ? await showNalaraTimePicker(
                 context: context,
                 initialTime: TimeOfDay.fromDateTime(local),
               )
             : const TimeOfDay(hour: 0, minute: 0);
-        if (time != null) {
+        if (time != null && context.mounted) {
           onChanged(
             DateTimeUtils.fromWallTime(date, time.hour, time.minute, timezone),
           );
         }
       },
-      icon: Icon(withTime ? Icons.schedule : Icons.calendar_today_outlined),
-      label: Text(
-        '$label: ${withTime ? DateTimeUtils.full(value, timezone) : DateTimeUtils.date(value, timezone)}',
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: NalaraColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  withTime
+                      ? DateTimeUtils.full(value, timezone)
+                      : DateTimeUtils.date(value, timezone),
+                  style: const TextStyle(color: NalaraColors.ink, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Icon(Icons.calendar_today_outlined, size: 19),
+        ],
       ),
     ),
   );

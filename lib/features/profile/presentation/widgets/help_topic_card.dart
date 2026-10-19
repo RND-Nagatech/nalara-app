@@ -93,6 +93,43 @@ class HelpTopicCard extends StatelessWidget {
                         const Divider(height: 1, color: HelpCenterStyle.line),
                         const SizedBox(height: 14),
                         Text(topic.answer, style: HelpCenterStyle.body),
+                        if (topic.steps.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          for (final (index, step) in topic.steps.indexed)
+                            Padding(
+                              key: ValueKey('help-step-${topic.id}-$index'),
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 24,
+                                    child: Text(
+                                      '${index + 1}.',
+                                      style: HelpCenterStyle.body.copyWith(
+                                        color: HelpCenterStyle.green,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      step,
+                                      style: HelpCenterStyle.body,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                        if (topic.note != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            topic.note!,
+                            key: ValueKey('help-note-${topic.id}'),
+                            style: HelpCenterStyle.body,
+                          ),
+                        ],
                         if (onOpen != null && topic.actionLabel != null) ...[
                           const SizedBox(height: 8),
                           Align(

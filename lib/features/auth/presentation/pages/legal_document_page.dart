@@ -276,8 +276,10 @@ class _ArticleCard extends StatelessWidget {
     ]),
     _LegalSectionData('6. Retensi data', [
       'Kami menyimpan data selama akun aktif atau selama diperlukan untuk menyediakan layanan, menjaga catatan pembelajaran, menyelesaikan sengketa, memenuhi kewajiban hukum, dan menegakkan perjanjian. Setelah tidak diperlukan, data akan dihapus atau dianonimkan sesuai proses yang berlaku.',
+      'Setelah permintaan penghapusan Guru diterima, akses akun dan portal terkait ditutup. Server menghapus data ruang kerja secara otomatis dan mencoba kembali bila layanan terkait tidak tersedia. Penanda teknis minimal dipertahankan untuk mencegah pemulihan akses atau data dari permintaan lama. Cadangan dan catatan pada penyedia pembayaran mengikuti kebijakan retensi tersendiri.',
     ]),
     _LegalSectionData('7. Hak Anda', [
+      'Guru dapat memulai penghapusan permanen melalui Lainnya → Hapus akun setelah verifikasi kata sandi atau Google yang sama. Penghapusan mencakup data kelolaan serta akses orang tua/siswa terkait, bukan menghapus akun Google atau membuat refund otomatis.',
       'Bergantung pada hukum yang berlaku, Anda dapat meminta akses, perbaikan, pembaruan, penghapusan, atau salinan data pribadi. Gunakan kanal dukungan resmi di aplikasi NALARA; verifikasi identitas dapat diperlukan.',
     ]),
     _LegalSectionData('8. Data siswa dan pihak di bawah umur', [

@@ -47,6 +47,7 @@ class _SubscriptionStudentsPageState extends State<SubscriptionStudentsPage> {
     builder: (context, action) => PagedListPage<Student>(
       title: 'Siswa aktif',
       empty: 'Belum ada siswa aktif. Siswa yang diarsipkan tetap tersimpan.',
+      emptyArtwork: 'assets/Empty/empty siswa.png',
       load: _load,
       controls: (_) => [
         const Padding(
@@ -57,7 +58,10 @@ class _SubscriptionStudentsPageState extends State<SubscriptionStudentsPage> {
           ),
         ),
         if (action.error != null)
-          Text(action.error!, style: const TextStyle(color: Color(0xFFA23535))),
+          Text(
+            action.error!,
+            style: const TextStyle(color: NalaraColors.danger),
+          ),
       ],
       itemBuilder: (context, student, reload) => Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -228,30 +232,22 @@ class _SubscriptionPageState extends State<SubscriptionPage>
             ),
           ],
           body: value == null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: state.error != null
-                        ? Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(state.error!, textAlign: TextAlign.center),
-                              const SizedBox(height: 16),
-                              FilledButton(
-                                onPressed: _synchronize,
-                                child: const Text('Coba lagi'),
+              ? state.error != null
+                    ? SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ErrorNotice(state.error!, retry: _synchronize),
+                            TextButton(
+                              onPressed: () => _submit.run(
+                                () => getIt<AuthCubit>().logout(),
                               ),
-                              TextButton(
-                                onPressed: () => _submit.run(
-                                  () => getIt<AuthCubit>().logout(),
-                                ),
-                                child: const Text('Keluar dari akun'),
-                              ),
-                            ],
-                          )
-                        : const CircularProgressIndicator(),
-                  ),
-                )
+                              child: const Text('Keluar dari akun'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: _synchronize,
                   child: SingleChildScrollView(
@@ -308,7 +304,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                                       child: Text(
                                         action.error!,
                                         style: const TextStyle(
-                                          color: Color(0xFFA23535),
+                                          color: NalaraColors.danger,
                                         ),
                                       ),
                                     ),
@@ -419,22 +415,21 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                             if (!_loadingPayments &&
                                 _payments.isEmpty &&
                                 _paymentError == null)
-                              _surface(
-                                const Text(
-                                  'Belum ada pembayaran. Nikmati trial Anda terlebih dahulu.',
-                                  style: TextStyle(
-                                    color: NalaraColors.muted,
-                                    height: 1.6,
-                                  ),
-                                ),
+                              const EmptyNotice(
+                                'Belum ada pembayaran. Nikmati trial Anda terlebih dahulu.',
+                                imagePath: 'assets/Empty/Empty target.png',
                               ),
                             for (final payment in _payments)
                               _paymentTile(payment),
                             if (_paymentError != null)
-                              TextButton(
-                                onPressed: () =>
-                                    _loadPayments(reset: _page == 0),
-                                child: Text('$_paymentError\nCoba lagi'),
+                              ErrorNotice(
+                                _paymentError!,
+                                title: 'Riwayat pembayaran belum dapat dimuat',
+                                retry: () => _loadPayments(reset: _page == 0),
+                                compact: _payments.isNotEmpty,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                             if (_loadingPayments)
                               const Padding(
@@ -461,9 +456,11 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                               ),
                             ),
                             if (state.error != null)
-                              Text(
+                              ErrorNotice(
                                 state.error!,
-                                style: const TextStyle(color: Colors.red),
+                                retry: _synchronize,
+                                compact: true,
+                                padding: const EdgeInsets.only(top: 16),
                               ),
                           ],
                         ),
@@ -478,11 +475,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
   Widget _hero(TutorSubscription value, bool blocked) => Container(
     padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF123E31), Color(0xFF28664F)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
+      color: NalaraColors.green,
       borderRadius: BorderRadius.circular(26),
     ),
     child: Column(
@@ -492,12 +485,8 @@ class _SubscriptionPageState extends State<SubscriptionPage>
           children: [
             const Expanded(
               child: Text(
-                'RUANG TUMBUH ANDA',
-                style: TextStyle(
-                  color: Color(0xFFCEE3D4),
-                  fontSize: 11,
-                  letterSpacing: 2,
-                ),
+                'Paket Anda',
+                style: TextStyle(color: Color(0xFFCEE3D4), fontSize: 12),
               ),
             ),
             Container(
@@ -515,7 +504,7 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         ),
         const SizedBox(height: 22),
         Text(
-          blocked ? 'Lanjutkan langkah baik Anda' : value.name,
+          blocked ? 'Masa akses berakhir' : value.name,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 25,
@@ -588,16 +577,15 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEBF3E8),
+                    color: NalaraColors.lightGreen,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
-                    'PILIHAN LENGKAP',
+                    'Fitur lengkap',
                     style: TextStyle(
                       color: NalaraColors.green,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),

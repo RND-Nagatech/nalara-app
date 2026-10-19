@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../utils/date_time_utils.dart';
 import '../../../../shared/widgets/nalara_surface_card.dart';
+import '../../../../shared/widgets/nalara_pickers.dart';
 import 'schedule_form_style.dart';
 
 class ScheduleFormSection extends StatelessWidget {
@@ -52,14 +53,14 @@ class ScheduleDateTimeCard extends StatelessWidget {
   Future<void> _pick(BuildContext context) async {
     FocusScope.of(context).unfocus();
     final local = DateTimeUtils.local(value, timezone);
-    final date = await showDatePicker(
+    final date = await showNalaraDatePicker(
       context: context,
       initialDate: local,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (date == null || !context.mounted) return;
-    final time = await showTimePicker(
+    final time = await showNalaraTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(local),
     );

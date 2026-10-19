@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/nalara_error_notice.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
 import '../../domain/entities/lesson.dart';
 import '../../domain/entities/schedule_calendar.dart';
@@ -42,20 +43,10 @@ class AgendaTabBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = value?.data;
     final scope = attendance ? 'attendance' : 'agenda';
-    final failure = Padding(
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value?.error ?? '',
-            textAlign: TextAlign.center,
-            style: AgendaStyle.body,
-          ),
-          const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
-        ],
-      ),
+    final failure = ErrorNotice(
+      value?.error ?? '',
+      retry: onRetry,
+      compact: data?.items.isNotEmpty ?? false,
     );
     final window = ScheduleCalendar.window(date, period, timezone);
     return RefreshIndicator(

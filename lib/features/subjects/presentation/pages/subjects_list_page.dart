@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/nalara_empty_state.dart';
 import '../../../../shared/widgets/nalara_header.dart';
-import '../../../../shared/widgets/nalara_card_style.dart';
+import '../../../../shared/widgets/nalara_error_notice.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -149,7 +150,7 @@ class _SubjectsPageState extends State<SubjectsPage>
   );
 
   Widget _addButton() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 22),
+    padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
     child: FilledButton(
       key: const ValueKey('subjects-add'),
       onPressed: () => _open('/teacher/subjects/new', adding: true),
@@ -187,78 +188,17 @@ class _SubjectsPageState extends State<SubjectsPage>
     ),
   );
 
-  Widget _empty() => Padding(
-    padding: const EdgeInsets.fromLTRB(28, 32, 28, 32),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          'Belum ada bidang belajar',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'NalaraInter',
-            fontSize: 19,
-            height: 1.4,
-            fontWeight: FontWeight.w700,
-            color: SubjectFormStyle.ink,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Tambahkan bidang yang Anda ajarkan, seperti Matematika, Piano, atau Renang.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'NalaraInter',
-            fontSize: 13,
-            height: 1.5,
-            color: SubjectFormStyle.muted,
-          ),
-        ),
-      ],
-    ),
+  Widget _empty() => const NalaraEmptyState(
+    imagePath: 'assets/Empty/empty siswa.png',
+    title: 'Belum ada bidang belajar',
+    message:
+        'Tambahkan bidang yang Anda ajarkan, seperti Matematika, Piano, atau Renang.',
   );
 
-  Widget _error(String message) => Padding(
-    padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: NalaraCardStyle.border),
-        boxShadow: const [
-          BoxShadow(
-            color: NalaraCardStyle.shadow,
-            blurRadius: 16,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              message,
-              style: const TextStyle(
-                fontFamily: 'NalaraInter',
-                fontSize: 13,
-                height: 1.5,
-                color: SubjectFormStyle.ink,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: _cubit.reload,
-                child: const Text('Coba lagi'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
+  Widget _error(String message) => ErrorNotice(
+    message,
+    retry: _cubit.reload,
+    compact: _cubit.state.result?.items.isNotEmpty ?? false,
   );
 
   Widget _pagination(SubjectsState state) {

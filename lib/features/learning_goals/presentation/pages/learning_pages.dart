@@ -282,7 +282,7 @@ class _TargetDetailPageState extends State<TargetDetailPage>
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
         20,
-        0,
+        16,
         20,
         28 + MediaQuery.paddingOf(context).bottom,
       ),
@@ -343,11 +343,9 @@ class _TargetDetailPageState extends State<TargetDetailPage>
           const Text('Riwayat perkembangan', style: PlanDetailStyle.title),
           const SizedBox(height: 14),
           if (data.history!.isEmpty)
-            const PlanDetailCard(
-              child: Text(
-                'Belum ada perubahan progress yang dibagikan pada target ini.',
-                style: PlanDetailStyle.body,
-              ),
+            const EmptyNotice(
+              'Belum ada perubahan progress yang dibagikan pada target ini.',
+              imagePath: 'assets/Empty/Empty target.png',
             )
           else
             for (final record in data.history!)

@@ -8,8 +8,12 @@ import '../domain/page.dart';
 import '../../utils/color.dart';
 import 'feedback_notice.dart';
 import 'nalara_load_more.dart';
+import 'nalara_empty_state.dart';
 import 'nalara_page_header.dart';
-import 'nalara_surface_card.dart';
+import 'nalara_error_notice.dart';
+import 'nalara_dialog.dart';
+
+export 'nalara_error_notice.dart';
 
 class PageBody extends StatelessWidget {
   final List<Widget> children;
@@ -51,54 +55,10 @@ class EmptyNotice extends StatelessWidget {
   final String? imagePath;
   const EmptyNotice(this.message, {super.key, this.action, this.imagePath});
   @override
-  Widget build(BuildContext context) => Align(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 520),
-      child: NalaraSurfaceCard(
-        padding: const EdgeInsets.all(26),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (imagePath != null)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 240),
-                child: Image.asset(
-                  imagePath!,
-                  fit: BoxFit.contain,
-                  excludeFromSemantics: true,
-                ),
-              )
-            else
-              const Icon(
-                Icons.menu_book_outlined,
-                size: 42,
-                color: NalaraColors.green,
-              ),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            if (action != null)
-              Padding(padding: const EdgeInsets.only(top: 16), child: action!),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class ErrorNotice extends StatelessWidget {
-  final String message;
-  final VoidCallback retry;
-  const ErrorNotice(this.message, {super.key, required this.retry});
-  @override
-  Widget build(BuildContext context) => Center(
-    child: EmptyNotice(
-      message,
-      action: FilledButton.icon(
-        onPressed: retry,
-        icon: const Icon(Icons.refresh),
-        label: const Text('Coba lagi'),
-      ),
-    ),
+  Widget build(BuildContext context) => NalaraEmptyState(
+    imagePath: imagePath ?? 'assets/Empty/empty siswa.png',
+    message: message,
+    action: action,
   );
 }
 
@@ -271,47 +231,86 @@ class _PagedListPageState<T> extends State<PagedListPage<T>>
                     }
                     return RefreshIndicator(
                       onRefresh: _refresh,
-                      child: PageBody(
-                        children: [
-                          ...?widget.controls?.call(() {
-                            page = 1;
-                            cubit.load();
-                          }),
-                          if (state.status == LoadStatus.loading ||
-                              state.value == null)
-                            const LinearProgressIndicator(),
-                          if (state.status == LoadStatus.empty)
-                            EmptyNotice(
-                              widget.empty,
-                              imagePath: widget.emptyArtwork,
-                              action: widget.newRoute == null
-                                  ? null
-                                  : FilledButton(
-                                      onPressed: add,
-                                      child: const Text('Tambah sekarang'),
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1000),
+                          child: CustomScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  20,
+                                  12,
+                                  20,
+                                  0,
+                                ),
+                                sliver: SliverList.list(
+                                  children: [
+                                    ...?widget.controls?.call(() {
+                                      page = 1;
+                                      cubit.load();
+                                    }),
+                                    if (state.status == LoadStatus.loading ||
+                                        state.value == null)
+                                      const LinearProgressIndicator(),
+                                  ],
+                                ),
+                              ),
+                              if (state.status == LoadStatus.empty)
+                                SliverFillRemaining(
+                                  hasScrollBody: false,
+                                  child: EmptyNotice(
+                                    widget.empty,
+                                    imagePath: widget.emptyArtwork,
+                                    action: widget.newRoute == null
+                                        ? null
+                                        : FilledButton(
+                                            onPressed: add,
+                                            child: const Text(
+                                              'Tambah sekarang',
+                                            ),
+                                          ),
+                                  ),
+                                )
+                              else if (state.value != null)
+                                SliverPadding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  sliver: SliverList.builder(
+                                    itemCount: state.value!.items.length,
+                                    itemBuilder: (context, index) =>
+                                        widget.itemBuilder(
+                                          context,
+                                          state.value!.items[index],
+                                          cubit.load,
+                                        ),
+                                  ),
+                                ),
+                              if (state.value != null && state.value!.total > 0)
+                                SliverPadding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    18,
+                                    20,
+                                    70,
+                                  ),
+                                  sliver: SliverToBoxAdapter(
+                                    child: NalaraLoadMoreButton(
+                                      hasMore: state.value!.hasNext,
+                                      loading:
+                                          state.status == LoadStatus.loading,
+                                      onPressed: () {
+                                        page++;
+                                        cubit.load(append: true);
+                                      },
                                     ),
-                            ),
-                          if (state.value != null)
-                            ...state.value!.items.map(
-                              (item) =>
-                                  widget.itemBuilder(context, item, cubit.load),
-                            ),
-                          if (state.value != null && state.value!.total > 0)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                top: 18,
-                                bottom: 70,
-                              ),
-                              child: NalaraLoadMoreButton(
-                                hasMore: state.value!.hasNext,
-                                loading: state.status == LoadStatus.loading,
-                                onPressed: () {
-                                  page++;
-                                  cubit.load(append: true);
-                                },
-                              ),
-                            ),
-                        ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -365,54 +364,49 @@ class SubmitButton extends StatelessWidget {
 Future<bool> confirmAction(BuildContext context, String message) async =>
     await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: .16),
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-        child: NalaraSurfaceCard(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-          radius: 20,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Konfirmasi',
-                style: TextStyle(
-                  fontFamily: 'NalaraInter',
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: NalaraColors.ink,
+      barrierColor: NalaraColors.scrim,
+      builder: (context) => NalaraDialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Konfirmasi',
+              style: TextStyle(
+                fontFamily: 'NalaraInter',
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: NalaraColors.ink,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              style: const TextStyle(
+                fontFamily: 'NalaraInter',
+                fontSize: 13.5,
+                height: 1.5,
+                color: NalaraColors.muted,
+              ),
+            ),
+            const SizedBox(height: 18),
+            OverflowBar(
+              alignment: MainAxisAlignment.end,
+              spacing: 8,
+              overflowSpacing: 8,
+              overflowAlignment: OverflowBarAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Batal'),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                message,
-                style: const TextStyle(
-                  fontFamily: 'NalaraInter',
-                  fontSize: 13.5,
-                  height: 1.5,
-                  color: NalaraColors.muted,
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Lanjutkan'),
                 ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Batal'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Lanjutkan'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     ) ??

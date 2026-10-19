@@ -4,6 +4,7 @@ import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/nalara_card_style.dart';
 import '../../../../utils/date_time_utils.dart';
 import '../../../../utils/injector.dart';
+import '../../../../utils/color.dart';
 import '../../domain/entities/progress_record.dart';
 import '../../domain/repositories/history_repository.dart';
 
@@ -14,6 +15,7 @@ class HistoryPage extends StatelessWidget {
   Widget build(BuildContext context) => PagedListPage<ProgressRecord>(
     title: 'Riwayat progress',
     empty: 'Belum ada perubahan progress pada target ini.',
+    emptyArtwork: 'assets/Empty/Empty target.png',
     load: (page) => getIt<HistoryRepository>().list(targetId, page: page),
     itemBuilder: (context, record, _) => HistoryRecordCard(record: record),
   );
@@ -29,32 +31,37 @@ class HistoryRecordCard extends StatelessWidget {
     decoration: NalaraCardStyle.decoration(radius: 17),
     child: Padding(
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.timeline_outlined),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${record.before}% → ${record.after}%',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                Text(DateTimeUtils.full(record.createdAt)),
-                if (record.note.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(record.note),
-                  ),
-                Text(statusLabel(record.visibility)),
-                const Text('Dicatat oleh Guru · waktu server'),
-                if (record.sessionId != null)
-                  const Text('Terhubung dengan sesi les'),
-              ],
+          Text(
+            '${record.before}% → ${record.after}%',
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              color: NalaraColors.green,
             ),
           ),
+          const SizedBox(height: 6),
+          Text(
+            DateTimeUtils.full(record.createdAt),
+            style: const TextStyle(fontSize: 12, color: NalaraColors.muted),
+          ),
+          if (record.note.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(record.note),
+            ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            children: [
+              Text(statusLabel(record.visibility)),
+              const Text('Dicatat oleh Guru'),
+            ],
+          ),
+          if (record.sessionId != null) const Text('Terhubung dengan sesi les'),
         ],
       ),
     ),

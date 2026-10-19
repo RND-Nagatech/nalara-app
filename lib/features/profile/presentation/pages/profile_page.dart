@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/state/load_cubit.dart';
 import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/page_widgets.dart';
+import '../../../../shared/widgets/nalara_surface_card.dart';
 import '../../../../utils/injector.dart';
 import '../../../auth/domain/entities/teacher.dart';
+import '../../../access/domain/entities/access_profile.dart';
 import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../widgets/more_menu_tile.dart';
 import '../widgets/profile_account_card.dart';
@@ -20,11 +22,13 @@ import '../../../students/presentation/widgets/student_profile_card.dart';
 class ProfilePage extends StatefulWidget {
   final Future<Student> Function()? loadStudent;
   final String routePrefix;
+  final bool parent;
   const ProfilePage({
     super.key,
     this.loadStudent,
     this.routePrefix = '/teacher',
-  });
+    this.parent = false,
+  }) : assert(!parent || (loadStudent == null && routePrefix == '/parent'));
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -35,6 +39,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final _submit = SubmitCubit();
   bool _confirmingLogout = false;
   LoadCubit<Student>? _student;
+  bool get _portal => widget.parent || widget.loadStudent != null;
 
   @override
   void initState() {
@@ -71,20 +76,20 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final confirmed = await confirmAction(
         context,
-        widget.loadStudent == null
-            ? 'Keluar dari akun Guru?'
-            : 'Keluar dari akun siswa?',
+        widget.parent
+            ? 'Keluar dari akun Orang Tua?'
+            : _portal
+            ? 'Keluar dari akun siswa?'
+            : 'Keluar dari akun Guru?',
       );
       if (!mounted ||
           !confirmed ||
-          (widget.loadStudent == null
-              ? _auth.state.status != AuthStatus.authenticated
-              : _auth.state.accessProfile == null)) {
+          (_portal
+              ? _auth.state.accessProfile == null
+              : _auth.state.status != AuthStatus.authenticated)) {
         return;
       }
-      await _submit.run(
-        widget.loadStudent == null ? _auth.logout : _auth.changeUser,
-      );
+      await _submit.run(_portal ? _auth.changeUser : _auth.logout);
     } finally {
       if (mounted) setState(() => _confirmingLogout = false);
     }
@@ -114,15 +119,22 @@ class _ProfilePageState extends State<ProfilePage> {
                         ? _studentBody()
                         : BlocBuilder<AuthCubit, AuthState>(
                             bloc: _auth,
-                            builder: (context, state) => state.teacher == null
-                                ? const Center(
-                                    child: Text(
-                                      'Informasi akun belum tersedia.',
-                                      textAlign: TextAlign.center,
-                                      style: ProfileStyle.body,
-                                    ),
-                                  )
-                                : _content(state.teacher!),
+                            builder: (context, state) {
+                              if (widget.parent &&
+                                  state.accessProfile != null) {
+                                return _parentContent(state.accessProfile!);
+                              }
+                              if (!widget.parent && state.teacher != null) {
+                                return _content(state.teacher!);
+                              }
+                              return const Center(
+                                child: Text(
+                                  'Informasi akun belum tersedia.',
+                                  textAlign: TextAlign.center,
+                                  style: ProfileStyle.body,
+                                ),
+                              );
+                            },
                           ),
                   ),
                 ],
@@ -152,7 +164,11 @@ class _ProfilePageState extends State<ProfilePage> {
         const SizedBox(width: 14),
         Expanded(
           child: Text(
-            widget.loadStudent == null ? 'Profil Guru' : 'Profil saya',
+            widget.parent
+                ? 'Profil Orang Tua'
+                : _portal
+                ? 'Profil saya'
+                : 'Profil Guru',
             style: const TextStyle(
               fontFamily: 'NalaraInter',
               fontSize: 17,
@@ -166,13 +182,82 @@ class _ProfilePageState extends State<ProfilePage> {
     ),
   );
 
+  Widget _parentContent(AccessProfile profile) {
+    final name = profile.name.trim();
+    return PageBody(
+      children: [
+        NalaraSurfaceCard(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: ProfileStyle.sage,
+                foregroundColor: ProfileStyle.green,
+                child: Text(
+                  name.isEmpty ? '–' : name.characters.first.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name.isEmpty ? 'Nama belum tersedia' : name,
+                      style: ProfileStyle.title.copyWith(fontSize: 18),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('Orang Tua', style: ProfileStyle.body),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        _sectionTitle('Informasi akun'),
+        const SizedBox(height: 12),
+        NalaraSurfaceCard(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DetailRow(
+                'Nomor HP',
+                profile.phone?.trim().isNotEmpty == true
+                    ? profile.phone!
+                    : 'Belum tersedia',
+              ),
+              const Divider(height: 16),
+              DetailRow('Keluarga', profile.familyName ?? ''),
+              const Divider(height: 16),
+              DetailRow('Anak terhubung', '${profile.children.length} anak'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          'Data orang tua dan keluarga dikelola oleh Guru.',
+          style: ProfileStyle.body,
+        ),
+        const SizedBox(height: 26),
+        _logoutAction(),
+      ],
+    );
+  }
+
   Widget _studentBody() => BlocBuilder<LoadCubit<Student>, LoadState<Student>>(
     bloc: _student,
     builder: (context, state) => RefreshIndicator(
       onRefresh: _student!.load,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(22, 0, 22, 28),
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
         children: [
           if (state.status == LoadStatus.loading)
             const LinearProgressIndicator(),
@@ -207,7 +292,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _content(Teacher teacher) => SingleChildScrollView(
     key: const PageStorageKey('profile-scroll'),
-    padding: const EdgeInsets.fromLTRB(22, 0, 22, 28),
+    padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -217,9 +302,7 @@ class _ProfilePageState extends State<ProfilePage> {
           bloc: getIt<SubscriptionCubit>(),
           builder: (context, state) => Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF153F31), Color(0xFF28654D)],
-              ),
+              color: ProfileStyle.green,
               borderRadius: BorderRadius.circular(23),
             ),
             child: InkWell(
@@ -234,17 +317,16 @@ class _ProfilePageState extends State<ProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
-                      'LANGGANAN NALARA',
+                      'Langganan NALARA',
                       style: TextStyle(
                         color: Color(0xFFCAE0D2),
-                        fontSize: 10,
-                        letterSpacing: 1.8,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      state.value?.name ?? 'Ruang tumbuh Anda',
+                      state.value?.name ?? 'Paket Anda',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 23,

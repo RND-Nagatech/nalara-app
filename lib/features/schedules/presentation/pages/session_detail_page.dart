@@ -14,6 +14,7 @@ import '../../domain/usecases/load_session_overview.dart';
 import '../widgets/session_action_cards.dart';
 import '../widgets/session_detail_style.dart';
 import '../widgets/session_summary_card.dart';
+import '../../../teaching_guide/presentation/session_teaching_guide.dart';
 
 typedef SessionOverviewLoader = Future<SessionOverview> Function(String id);
 typedef SessionRescheduleRequest =
@@ -241,20 +242,11 @@ class _SessionDetailPageState extends State<SessionDetailPage>
     bool busy,
   ) {
     if (state.status == LoadStatus.error) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: SessionSectionCard(
-          title: 'Sesi belum dapat dimuat',
-          children: [
-            Text(state.error!, style: SessionDetailStyle.body),
-            const SizedBox(height: 12),
-            FilledButton(
-              key: const ValueKey('session-retry'),
-              onPressed: _refresh,
-              child: const Text('Coba lagi'),
-            ),
-          ],
-        ),
+      return ErrorNotice(
+        state.error!,
+        title: 'Sesi belum dapat dimuat',
+        retry: _refresh,
+        retryKey: const ValueKey('session-retry'),
       );
     }
     if (state.value == null) {
@@ -270,7 +262,7 @@ class _SessionDetailPageState extends State<SessionDetailPage>
       child: SingleChildScrollView(
         key: PageStorageKey('session-detail-${lesson.id}'),
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -296,6 +288,16 @@ class _SessionDetailPageState extends State<SessionDetailPage>
                     )
                   : null,
             ),
+            if (!widget.readOnly &&
+                widget.routePrefix == '/teacher' &&
+                lesson.status != 'cancelled')
+              SessionTeachingGuide(
+                key: const ValueKey('session-teaching-guide'),
+                attendanceRecorded: lesson.attendance != 'pending',
+                reportPublished: data.reports.any(
+                  (report) => report.status == 'published',
+                ),
+              ),
             if (lesson.status != 'cancelled')
               SessionAttendanceCard(
                 key: ValueKey('session-attendance-${lesson.id}'),
@@ -318,7 +320,6 @@ class _SessionDetailPageState extends State<SessionDetailPage>
                       label: 'Minta ganti tanggal',
                       description:
                           'Pilih waktu tersedia dan kirim permintaan ke Guru.',
-                      icon: Icons.calendar_month_outlined,
                       onPressed: enabled
                           ? () => _requestReschedule(context, data)
                           : null,
@@ -328,7 +329,6 @@ class _SessionDetailPageState extends State<SessionDetailPage>
                       key: const ValueKey('session-reschedule'),
                       label: 'Ubah waktu pertemuan ini',
                       description: 'Atur ulang tanggal dan waktu sesi.',
-                      icon: Icons.calendar_month_outlined,
                       onPressed: enabled
                           ? () =>
                                 _open('${widget.routePrefix}/sessions/$id/edit')

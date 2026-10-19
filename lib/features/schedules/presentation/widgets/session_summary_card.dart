@@ -40,18 +40,16 @@ class SessionSummaryCard extends StatelessWidget {
           lesson.subjectName.isEmpty
               ? 'Nama bidang belum tersedia'
               : lesson.subjectName,
-          Icons.menu_book_outlined,
         ),
         const SizedBox(height: 14),
         if (showTeacher) ...[
           _detail(
             'Guru',
             lesson.teacherName.isEmpty ? 'Belum tersedia' : lesson.teacherName,
-            Icons.person_outline_rounded,
           ),
           const SizedBox(height: 14),
         ],
-        _detail('Waktu ($zone)', time, Icons.calendar_month_outlined),
+        _detail('Waktu ($zone)', time),
         const SizedBox(height: 18),
         Wrap(
           spacing: 28,
@@ -135,33 +133,14 @@ class SessionSummaryCard extends StatelessWidget {
     },
   );
 
-  Widget _detail(String label, String value, IconData icon) => Row(
+  Widget _detail(String label, String value) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Container(
-        width: 34,
-        height: 34,
-        decoration: const BoxDecoration(
-          color: SessionDetailStyle.sage,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: SessionDetailStyle.green, size: 19),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: SessionDetailStyle.body.copyWith(fontSize: 12)),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: SessionDetailStyle.body.copyWith(
-                color: SessionDetailStyle.ink,
-              ),
-            ),
-          ],
-        ),
+      Text(label, style: SessionDetailStyle.body.copyWith(fontSize: 12)),
+      const SizedBox(height: 2),
+      Text(
+        value,
+        style: SessionDetailStyle.body.copyWith(color: SessionDetailStyle.ink),
       ),
     ],
   );

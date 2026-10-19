@@ -83,6 +83,15 @@ const _items = [
     route: '/teacher/help',
     icon: Icons.help_rounded,
   ),
+  MoreMenuItem(
+    id: 'delete-account',
+    title: 'Hapus akun',
+    description: 'Hapus akun dan data kelolaan Anda secara permanen',
+    route: '/teacher/delete-account',
+    icon: Icons.person_remove_outlined,
+    foreground: Color(0xFFA64235),
+    background: Color(0xFFF8ECE8),
+  ),
 ];
 
 class MorePage extends StatelessWidget {
@@ -107,7 +116,7 @@ class MorePage extends StatelessWidget {
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(
                   18,
-                  0,
+                  16,
                   18,
                   24 + MediaQuery.paddingOf(context).bottom,
                 ),

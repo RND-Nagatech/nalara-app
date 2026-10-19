@@ -7,6 +7,9 @@ class TokenStore {
   String _key(String name) => '$namespace$name';
   String? accessToken, refreshToken;
   bool _persistSession = true;
+  int _sessionGeneration = 0;
+  // A login/clear changes ownership; an access-token refresh does not.
+  int get sessionGeneration => _sessionGeneration;
   Future<void> restore() async {
     if (!_persistSession && refreshToken != null) return;
     accessToken = await storage.read(key: _key('access'));
@@ -14,6 +17,7 @@ class TokenStore {
   }
 
   Future<void> save(String access, String refresh, {bool? persist}) async {
+    if (persist != null) _sessionGeneration++;
     _persistSession = persist ?? _persistSession;
     if (_persistSession) {
       await storage.write(key: _key('refresh'), value: refresh);
@@ -27,6 +31,7 @@ class TokenStore {
   }
 
   Future<void> clear() async {
+    _sessionGeneration++;
     accessToken = null;
     refreshToken = null;
     _persistSession = true;

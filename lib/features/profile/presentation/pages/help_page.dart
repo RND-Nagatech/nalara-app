@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/nalara_header.dart';
-import '../../../../shared/widgets/nalara_card_style.dart';
+import '../../../../shared/widgets/nalara_empty_state.dart';
+import '../../../../shared/widgets/nalara_surface_card.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -121,6 +122,34 @@ class _HelpPageState extends State<HelpPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const HelpCenterHeader(),
+          if (widget.routePrefix == '/teacher') ...[
+            NalaraSurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Panduan mulai mengajar',
+                    style: HelpCenterStyle.body.copyWith(
+                      color: HelpCenterStyle.ink,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Lanjutkan langkah persiapan bidang belajar, siswa, jadwal, dan target Anda.',
+                    style: HelpCenterStyle.body,
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    key: const ValueKey('help-open-teaching-guide'),
+                    onPressed: () => _open('/teacher/getting-started'),
+                    child: const Text('Buka panduan'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           TextField(
             key: const ValueKey('help-search'),
             controller: _search,
@@ -191,43 +220,15 @@ class _HelpPageState extends State<HelpPage> {
     );
   }
 
-  Widget _empty() => Container(
+  Widget _empty() => NalaraEmptyState(
     key: const ValueKey('help-empty-search'),
-    padding: const EdgeInsets.all(22),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(19),
-      border: Border.all(color: NalaraCardStyle.border),
-      boxShadow: const [
-        BoxShadow(
-          color: NalaraCardStyle.shadow,
-          blurRadius: 16,
-          offset: Offset(0, 5),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Panduan tidak ditemukan',
-          style: HelpCenterStyle.body.copyWith(
-            color: HelpCenterStyle.ink,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(widget.searchHint, style: HelpCenterStyle.body),
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            key: const ValueKey('help-reset-search'),
-            onPressed: _clearSearch,
-            child: const Text('Lihat semua panduan'),
-          ),
-        ),
-      ],
+    imagePath: 'assets/Empty/empty siswa.png',
+    title: 'Panduan tidak ditemukan',
+    message: widget.searchHint,
+    action: TextButton(
+      key: const ValueKey('help-reset-search'),
+      onPressed: _clearSearch,
+      child: const Text('Lihat semua panduan'),
     ),
   );
 

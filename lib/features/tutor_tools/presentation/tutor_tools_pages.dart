@@ -8,51 +8,45 @@ import '../../../shared/state/load_cubit.dart';
 import '../../../shared/widgets/form_widgets.dart';
 import '../../../shared/widgets/nalara_dropdown.dart';
 import '../../../shared/widgets/nalara_page_header.dart';
+import '../../../shared/widgets/nalara_surface_card.dart';
 import '../../../shared/widgets/page_widgets.dart';
 import '../../../utils/color.dart';
 import '../../../utils/injector.dart';
 import '../../subscription/presentation/subscription_cubit.dart';
 import '../domain/load_tutor_catalog.dart';
 import '../domain/tutor_tools.dart';
+import 'branding_logo_card.dart';
 
-Widget toolCard(Widget child) => Container(
-  margin: const EdgeInsets.only(bottom: 14),
-  padding: const EdgeInsets.all(21),
-  decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(22),
-    border: Border.all(color: NalaraColors.line),
+Widget toolCard(Widget child) => Padding(
+  padding: const EdgeInsets.only(bottom: 14),
+  child: NalaraSurfaceCard(
+    radius: 20,
+    padding: const EdgeInsets.all(20),
+    child: child,
   ),
-  child: child,
 );
 Widget toolIntro(String title, String description) => Padding(
   padding: const EdgeInsets.fromLTRB(2, 12, 2, 24),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
-        'NALARA · RUANG TUMBUH',
-        style: TextStyle(
-          color: NalaraColors.green,
-          fontSize: 10,
-          letterSpacing: 1.8,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      const SizedBox(height: 12),
       Text(
         title,
         style: const TextStyle(
-          fontSize: 27,
+          fontSize: 23,
           height: 1.3,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
           color: NalaraColors.ink,
         ),
       ),
       const SizedBox(height: 10),
       Text(
         description,
-        style: const TextStyle(color: NalaraColors.muted, height: 1.65),
+        style: const TextStyle(
+          color: NalaraColors.muted,
+          fontSize: 13,
+          height: 1.6,
+        ),
       ),
     ],
   ),
@@ -76,7 +70,7 @@ class ProToolsGate extends StatelessWidget {
         body: PageBody(
           children: [
             toolIntro(
-              'Beri ruang lebih\nuntuk perkembangan.',
+              'Alat mengajar Pro',
               'Nikmati alat yang membantu Anda mengajar lebih efisien dan menyampaikan perkembangan dengan lebih baik.',
             ),
             toolCard(
@@ -177,7 +171,10 @@ class _ReportPdfButtonState extends State<ReportPdfButton> {
           label: Text(state.busy ? 'Menyiapkan PDF…' : 'Export laporan PDF'),
         ),
         if (state.error != null)
-          Text(state.error!, style: const TextStyle(color: Colors.red)),
+          Text(
+            state.error!,
+            style: const TextStyle(color: NalaraColors.danger),
+          ),
       ],
     ),
   );
@@ -507,7 +504,9 @@ class _ActivityEditorState extends State<_ActivityEditor> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           toolIntro(
-            'Belajar berlanjut,\ndi luar sesi.',
+            widget.activity == null
+                ? 'Buat aktivitas belajar'
+                : 'Detail aktivitas',
             'Bagikan instruksi dan materi dalam bentuk teks. Siswa dapat mengirim jawaban langsung di NALARA.',
           ),
           toolCard(
@@ -651,7 +650,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
           const Text('Buka jawaban dari detail tugas terlebih dahulu.')
         else ...[
           toolIntro(
-            'Arahan kecil,\ndampak bermakna.',
+            'Tanggapan untuk siswa',
             'Berikan tanggapan yang membantu siswa memahami langkah selanjutnya.',
           ),
           toolCard(
@@ -696,6 +695,7 @@ class TemplatesPage extends StatelessWidget {
     feature: 'reportTemplates',
     child: PagedListPage<ReportTemplate>(
       title: select ? 'Pilih template' : 'Template laporan',
+      emptyArtwork: 'assets/Empty/Empty target.png',
       empty:
           'Buat format laporan Anda sendiri, lalu gunakan kembali saat menulis laporan.',
       newRoute: '/teacher/templates/new',
@@ -781,7 +781,7 @@ class _TemplateEditorPageState extends State<TemplateEditorPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               toolIntro(
-                'Laporan rapi,\ntanpa mengulang.',
+                'Format laporan Anda',
                 'Tulis kerangka yang dapat dipakai kembali. Sesuaikan isinya dengan keadaan siswa sebelum menerbitkan laporan.',
               ),
               toolCard(
@@ -863,7 +863,7 @@ class _TemplateEditorPageState extends State<TemplateEditorPage> {
                   },
                   child: const Text(
                     'Hapus template',
-                    style: TextStyle(color: Color(0xFFA23535)),
+                    style: TextStyle(color: NalaraColors.danger),
                   ),
                 ),
             ],
@@ -893,7 +893,7 @@ class _ProgressAnalyticsPageState extends State<ProgressAnalyticsPage> {
       builder: (context, value, reload) => PageBody(
         children: [
           toolIntro(
-            'Lihat langkah kecil\nyang menjadi kemajuan.',
+            'Ringkasan perkembangan',
             'Ringkasan nyata dari target, riwayat perkembangan, dan presensi siswa Anda.',
           ),
           toolCard(
@@ -976,16 +976,22 @@ class _ProgressAnalyticsPageState extends State<ProgressAnalyticsPage> {
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
-                      Text('${subject.progress ?? 0}%'),
+                      Text(
+                        subject.progress == null ? '—' : '${subject.progress}%',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
-                  LinearProgressIndicator(
-                    value: (subject.progress ?? 0) / 100,
-                    minHeight: 8,
-                    color: NalaraColors.green,
-                    backgroundColor: NalaraColors.lightGreen,
-                  ),
+                  if (subject.progress != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: subject.progress! / 100,
+                        minHeight: 8,
+                        color: NalaraColors.green,
+                        backgroundColor: NalaraColors.lightGreen,
+                      ),
+                    ),
                   const SizedBox(height: 9),
                   Text(
                     '${subject.targetCount} target',
@@ -999,7 +1005,10 @@ class _ProgressAnalyticsPageState extends State<ProgressAnalyticsPage> {
             ),
           const SectionTitle('Jejak perkembangan terbaru'),
           if (value.history.isEmpty)
-            const Text('Belum ada perubahan progress yang dicatat.'),
+            const EmptyNotice(
+              'Belum ada perubahan progress yang dicatat.',
+              imagePath: 'assets/Empty/Empty target.png',
+            ),
           for (final sample in value.history)
             toolCard(
               Column(
@@ -1111,11 +1120,9 @@ class _PreferencesEditorState extends State<_PreferencesEditor> {
   Widget build(BuildContext context) => PageBody(
     children: [
       toolIntro(
+        widget.branding ? 'Identitas laporan' : 'Notifikasi yang Anda terima',
         widget.branding
-            ? 'Sentuhan Anda,\ndi setiap laporan.'
-            : 'Tetap terhubung,\ndengan cara Anda.',
-        widget.branding
-            ? 'Sesuaikan nama, warna, dan catatan penutup laporan PDF Anda.'
+            ? 'Sesuaikan logo, nama, warna, dan catatan penutup laporan PDF Anda.'
             : 'Pilih notifikasi push yang diterima akun Guru. Pesan tetap tercatat di kotak notifikasi dan tidak mengubah pengiriman kepada siswa atau orang tua.',
       ),
       toolCard(
@@ -1123,6 +1130,9 @@ class _PreferencesEditorState extends State<_PreferencesEditor> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (widget.branding) ...[
+              BrandingLogoCard(
+                hasStoredLogo: widget.preferences.logoVersion != null,
+              ),
               TextField(
                 controller: _name,
                 maxLength: 100,
@@ -1160,29 +1170,55 @@ class _PreferencesEditorState extends State<_PreferencesEditor> {
               ),
             ] else ...[
               for (var i = 0; i < _values.length; i++)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          const [
-                            'Pengingat jadwal & target H-1',
-                            'Perubahan progress',
-                            'Laporan belajar',
-                            'Tugas & materi',
-                          ][i],
-                          style: const TextStyle(height: 1.6),
-                        ),
+                Column(
+                  children: [
+                    if (i > 0) const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  const [
+                                    'Pengingat jadwal & target',
+                                    'Perubahan progress',
+                                    'Laporan belajar',
+                                    'Tugas & materi',
+                                  ][i],
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  const [
+                                    'Pemberitahuan satu hari sebelumnya.',
+                                    'Saat perkembangan belajar diperbarui.',
+                                    'Pembaruan terkait laporan sesi.',
+                                    'Pembaruan aktivitas belajar siswa.',
+                                  ][i],
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    height: 1.5,
+                                    color: NalaraColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Switch(
+                            value: _values[i],
+                            onChanged: (v) => setState(() => _values[i] = v),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Switch(
-                        value: _values[i],
-                        activeTrackColor: NalaraColors.green,
-                        onChanged: (v) => setState(() => _values[i] = v),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
             ],
             const SizedBox(height: 24),
@@ -1240,7 +1276,7 @@ class _DataExportPageState extends State<DataExportPage> {
       body: PageBody(
         children: [
           toolIntro(
-            'Data Anda,\nselalu dalam jangkauan.',
+            'Salinan data pengajaran',
             'Unduh salinan data pengajaran dalam format CSV untuk arsip dan pengolahan lebih lanjut.',
           ),
           toolCard(

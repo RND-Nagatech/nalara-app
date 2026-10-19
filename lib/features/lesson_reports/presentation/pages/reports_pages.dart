@@ -469,6 +469,7 @@ class ReportFormPage extends StatelessWidget {
       return PagedListPage<Lesson>(
         title: 'Pilih sesi untuk laporan',
         empty: 'Belum ada sesi. Tambahkan jadwal terlebih dahulu.',
+        emptyArtwork: 'assets/Empty/Jadwal kosong.png',
         newRoute: '/teacher/schedule/new',
         load: (page) => getIt<SchedulesRepository>().sessions(page: page),
         itemBuilder: (context, lesson, reload) => lesson.status == 'cancelled'

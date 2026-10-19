@@ -187,7 +187,7 @@ class _PlanDetailPageState extends State<PlanDetailPage>
     physics: const AlwaysScrollableScrollPhysics(),
     slivers: [
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 2, 20, 0),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         sliver: SliverList.list(
           children: [
             if (loading) const LinearProgressIndicator(),
@@ -256,11 +256,9 @@ class _PlanDetailPageState extends State<PlanDetailPage>
             ),
             const SizedBox(height: 13),
             if (data.targets.isEmpty)
-              const PlanDetailCard(
-                child: Text(
-                  'Belum ada target dalam periode ini.',
-                  style: PlanDetailStyle.body,
-                ),
+              const EmptyNotice(
+                'Belum ada target dalam periode ini.',
+                imagePath: 'assets/Empty/Empty target.png',
               ),
           ],
         ),

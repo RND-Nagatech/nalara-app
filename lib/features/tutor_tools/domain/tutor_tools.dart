@@ -80,12 +80,14 @@ class ReportTemplate {
 
 class TutorPreferences {
   final String displayName, tagline, footer, accentColor;
+  final String? logoVersion;
   final bool reminders, progress, reports, assignments;
   const TutorPreferences({
     this.displayName = '',
     this.tagline = '',
     this.footer = '',
     this.accentColor = '#155D49',
+    this.logoVersion,
     this.reminders = true,
     this.progress = true,
     this.reports = true,

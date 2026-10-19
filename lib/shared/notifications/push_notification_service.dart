@@ -149,6 +149,15 @@ class PushNotificationService {
     }
   }
 
+  /// The backend has already revoked the deleted account's device bindings.
+  /// Do not call authenticated endpoints using its now-revoked credentials.
+  Future<void> forgetDeletedAccount() async {
+    _accountType = null;
+    _pendingTap = null;
+    _pendingReadIds.clear();
+    await localNotifications.cancelAll();
+  }
+
   Future<void> markRead(String notificationId) async {
     if (notificationId.isEmpty) return;
     final accountType = _accountType;
@@ -216,6 +225,7 @@ class PushNotificationService {
   }
 
   Future<void> _showForeground(RemoteMessage message) async {
+    if (_accountType == null) return;
     final notification = message.notification;
     if (notification == null) return;
     final payload = <String, dynamic>{

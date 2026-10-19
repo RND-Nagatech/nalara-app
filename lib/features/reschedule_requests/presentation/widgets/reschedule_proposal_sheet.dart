@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../shared/state/load_cubit.dart';
 import '../../../../shared/widgets/nalara_dropdown.dart';
+import '../../../../shared/widgets/nalara_pickers.dart';
 import '../../../../utils/date_time_utils.dart';
 import '../../../schedules/domain/entities/schedule_calendar.dart';
 import '../../../schedules/domain/entities/schedule_period.dart';
@@ -88,7 +89,7 @@ class _RescheduleProposalSheetState extends State<RescheduleProposalSheet> {
     setState(() => _pickingDate = true);
     DateTime? selected;
     try {
-      selected = await showDatePicker(
+      selected = await showNalaraDatePicker(
         context: context,
         initialDate: DateTime(initial.year, initial.month, initial.day),
         firstDate: DateTime(today.year, today.month, today.day),

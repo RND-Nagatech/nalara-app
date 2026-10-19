@@ -5,6 +5,9 @@ import '../../utils/color.dart';
 class NalaraHeader extends StatelessWidget {
   final Widget child;
   final bool showDivider;
+
+  /// Space inside the header, before its bottom divider. Never leave a fixed
+  /// painted strip between the divider and the scrollable content viewport.
   final double bottomSpacing;
   const NalaraHeader({
     super.key,
@@ -22,13 +25,13 @@ class NalaraHeader extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         child,
+        if (bottomSpacing > 0) SizedBox(height: bottomSpacing),
         if (showDivider)
           const Divider(
             height: 1,
             thickness: 1,
             color: NalaraColors.headerDivider,
           ),
-        if (bottomSpacing > 0) SizedBox(height: bottomSpacing),
       ],
     ),
   );
@@ -40,6 +43,8 @@ class NalaraPageLayout extends StatelessWidget {
 
   /// Pinned tabs can own the divider at the bottom of the complete header.
   final bool showDivider;
+
+  /// Passed to [NalaraHeader]; retained above the divider, not below it.
   final double bottomSpacing;
   const NalaraPageLayout({
     super.key,

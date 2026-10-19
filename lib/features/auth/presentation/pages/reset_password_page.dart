@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../utils/injector.dart';
+import '../../../../utils/color.dart';
 import '../../../../utils/validators.dart';
 import '../../../../shared/widgets/feedback_notice.dart';
 import '../bloc/password_reset_cubit.dart';
@@ -425,11 +426,11 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
-      borderSide: BorderSide(color: Colors.red.shade700),
+      borderSide: const BorderSide(color: NalaraColors.danger),
     ),
     focusedErrorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
-      borderSide: BorderSide(color: Colors.red.shade700),
+      borderSide: const BorderSide(color: NalaraColors.danger),
     ),
     errorMaxLines: 2,
   );
@@ -477,7 +478,7 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
     liveRegion: true,
     child: Text(
       message,
-      style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+      style: const TextStyle(color: NalaraColors.danger, fontSize: 13),
     ),
   );
 

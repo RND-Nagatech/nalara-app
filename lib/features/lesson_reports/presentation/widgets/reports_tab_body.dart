@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/domain/page.dart';
 import '../../../../shared/state/load_cubit.dart';
+import '../../../../shared/widgets/nalara_error_notice.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
 import '../../domain/entities/lesson_report.dart';
 import 'report_list_card.dart';
@@ -123,15 +124,9 @@ class ReportsTabBody extends StatelessWidget {
     );
   }
 
-  Widget _error(String message, VoidCallback retry) => Padding(
-    padding: const EdgeInsets.all(22),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(message, textAlign: TextAlign.center, style: ReportsStyle.body),
-        const SizedBox(height: 12),
-        TextButton(onPressed: retry, child: const Text('Coba lagi')),
-      ],
-    ),
+  Widget _error(String message, VoidCallback retry) => ErrorNotice(
+    message,
+    retry: retry,
+    compact: state.value?.items.isNotEmpty ?? false,
   );
 }

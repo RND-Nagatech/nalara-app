@@ -145,6 +145,7 @@ class _ParentDashboardPageState extends State<ParentDashboardPage>
                                 child: ErrorNotice(
                                   state.error!,
                                   retry: _cubit.refresh,
+                                  compact: true,
                                 ),
                               ),
                             if (state.children.length > 1)

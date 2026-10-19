@@ -167,6 +167,34 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets(
+    'session guidance is teacher-only and never exposes teacher steps in read-only portals',
+    (tester) async {
+      viewport(tester);
+      await render(tester);
+      expect(key('teaching-guide'), findsOneWidget);
+      expect(find.text('Panduan sesi'), findsOneWidget);
+      for (final role in ['parent', 'student']) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: buildAppTheme(),
+            home: SessionDetailPage(
+              id: 'session-1',
+              readOnly: true,
+              routePrefix: '/$role',
+              allowSeriesNavigation: false,
+              loadOverview: load.call,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(key('teaching-guide'), findsNothing);
+        expect(find.text('Panduan sesi'), findsNothing);
+      }
+      expect(schedules.writes, isEmpty);
+    },
+  );
+
   test(
     'overview keeps canonical names, real series timezone and scoped report snapshot',
     () async {

@@ -12,6 +12,7 @@ import 'home_style.dart';
 class HomeDashboardView extends StatelessWidget {
   final Widget header;
   final Widget? hero;
+  final Widget? beforeSchedule;
   final List<Lesson>? sessions;
   final String timezone, scheduleTitle;
   final bool loading;
@@ -25,6 +26,7 @@ class HomeDashboardView extends StatelessWidget {
     super.key,
     required this.header,
     this.hero,
+    this.beforeSchedule,
     this.sessions,
     required this.timezone,
     required this.loading,
@@ -77,7 +79,23 @@ class HomeDashboardView extends StatelessWidget {
                               ),
                             if (error != null)
                               SliverToBoxAdapter(
-                                child: ErrorNotice(error!, retry: onRefresh),
+                                child: ErrorNotice(
+                                  error!,
+                                  retry: onRefresh,
+                                  compact: true,
+                                ),
+                              ),
+                            if (beforeSchedule != null)
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  18,
+                                  20,
+                                  18,
+                                  0,
+                                ),
+                                sliver: SliverToBoxAdapter(
+                                  child: beforeSchedule!,
+                                ),
                               ),
                             SliverToBoxAdapter(
                               child: HomeSectionHeading(
@@ -85,7 +103,18 @@ class HomeDashboardView extends StatelessWidget {
                                 onViewAll: onSchedule,
                               ),
                             ),
-                            if (sessions?.isEmpty ?? true)
+                            if ((sessions?.isEmpty ?? true) &&
+                                extraSlivers.isEmpty)
+                              SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: HomeEmptySchedule(
+                                  key: const ValueKey('home-empty-schedule'),
+                                  onCreate: onCreate ?? () {},
+                                  showAction: onCreate != null,
+                                  description: emptyDescription,
+                                ),
+                              )
+                            else if (sessions?.isEmpty ?? true)
                               SliverPadding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 18,

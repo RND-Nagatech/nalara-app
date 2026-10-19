@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'auth_palette.dart';
+import '../../../../utils/color.dart';
 
 class TermsConsent extends StatefulWidget {
   final bool value;
@@ -73,7 +74,9 @@ class _TermsConsentState extends State<TermsConsent> {
               activeColor: AuthPalette.green,
               checkColor: Colors.white,
               side: BorderSide(
-                color: widget.hasError ? Colors.redAccent : AuthPalette.green,
+                color: widget.hasError
+                    ? NalaraColors.danger
+                    : AuthPalette.green,
                 width: 1.5,
               ),
               shape: RoundedRectangleBorder(
@@ -126,7 +129,7 @@ class _TermsConsentState extends State<TermsConsent> {
             padding: EdgeInsets.only(left: 42, top: 3),
             child: Text(
               'Setujui syarat dan kebijakan terlebih dahulu.',
-              style: TextStyle(color: Colors.redAccent, fontSize: 12),
+              style: TextStyle(color: NalaraColors.danger, fontSize: 12),
             ),
           ),
       ],

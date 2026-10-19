@@ -1,5 +1,59 @@
 # NALARA Flutter — Guru, Orang Tua dan Siswa
 
+## Logo identitas dan PDF laporan
+
+**Profil Guru → Langganan NALARA → Ruang kerja Pro → Identitas laporan** (`/teacher/branding`) menyediakan unggah/ganti/hapus logo dengan preview dan dialog konfirmasi custom sesuai tema. Memakai entitlement branding existing: Tutor Pro dan Trial aktif, bukan Basic. PNG/JPEG maksimal 2 MB; backend memeriksa isi gambar dan batas 4 megapiksel. Tidak mengaktifkan attachment tugas/materi.
+
+Logo disimpan langsung setelah dipilih, terpisah dari tombol **Simpan pengaturan** untuk nama/tagline/warna/footer. Batal memilih tidak menghapus logo, gagal request mempertahankan preview lama, dan simpan teks tidak menghilangkan logo. Hapus hanya berlaku pada ekspor berikutnya; PDF yang sudah dibagikan tidak berubah. Pesan error backend diteruskan. Repository/Cubit terpisah menangani loading/retry, response usang/dispose, klik ganda dan session generation agar pemilihan akun A tidak terkirim ke akun B.
+
+`file_selector` dipakai hanya untuk pemilih file perangkat; editor/feedback tetap komponen NALARA. Karena ada plugin native baru, pengguna perlu menghentikan lalu menjalankan kembali aplikasi secara penuh dengan build lokalnya sendiri; **hot reload saja tidak cukup**. Agen tidak menjalankan build/aplikasi/simulator atau Flutter tests. `flutter analyze --no-pub` bersih. Preview PDF fiktif dan batas verifikasi ada di [VERIFICATION.md](../docs/VERIFICATION.md); API/backend terbaru harus diterapkan oleh pengguna agar endpoint tersedia.
+
+## Pusat Bantuan Guru: panduan penggunaan lengkap
+
+Lainnya → Pusat Bantuan memuat 16 topik: persiapan awal, bidang belajar, siswa/keluarga, jadwal, permintaan perubahan jadwal, target/progres, presensi/laporan, visibilitas laporan, referral, arsip/pencabutan akses, tugas/materi, notifikasi, langganan/pembayaran, alat Pro, penghapusan akun dan pemulihan akun/koneksi. Setiap topik mempunyai pengantar, langkah bernomor, catatan dampak/batasan dan tautan menu yang relevan bila tersedia.
+
+Kartu accordion krem/putih, artwork, header, pencarian dan navigasi existing dipertahankan. Pencarian lokal mencakup judul, pengantar, kata kunci, langkah, catatan dan label tindakan. Konten built-in bukan data akun atau janji layanan dukungan; tidak ada API baru, harga hardcode, tindakan otomatis, bypass paket atau tutorial overlay. Membuka bantuan penghapusan akun hanya membuka halaman tinjauan, bukan langsung menghapus. Model langkah/catatan opsional mempertahankan topik khusus portal Siswa tanpa mengikutsertakan tindakan Guru.
+
+Panduan Beranda tetap checklist singkat yang membaca progres dari backend; Pusat Bantuan menjadi referensi rinci yang bisa dibuka kapan saja. Konten menjelaskan durasi/slot reschedule, persetujuan tawaran orang tua, kunci presensi/laporan terbit, pilihan visibilitas dan perbedaan arsip/cabut kode/cabut akses sesuai alur source saat ini. Attachment tetap belum tersedia. Source tests disiapkan, tidak dijalankan; pemeriksaan menggunakan formatter, `flutter analyze --no-pub` dan diff review, tanpa build/server/simulator.
+
+## Hapus akun Guru
+
+**Lainnya → Hapus akun** menyediakan halaman krem/rounded sesuai tema, ringkasan data aktual, verifikasi kata sandi atau akun Google yang sama, persetujuan dampak, dan dialog konfirmasi terakhir. Backend melakukan pemeriksaan identitas/otorisasi; error ditampilkan apa adanya. Membuka halaman atau membatalkan dialog tidak menghapus apa pun. Menu tetap bisa dibuka setelah trial/langganan habis.
+
+Setelah backend menerima permintaan (202/pending), aplikasi membersihkan sesi dan kredensial Ingat saya yang cocok lalu kembali ke login. Perpindahan akun, refresh token, response terlambat dan disposal halaman tidak boleh menghapus sesi akun lain. Notice custom menjelaskan **permintaan diterima**, bukan mengklaim seluruh data sudah selesai dihapus; kegagalan cleanup lokal ditampilkan terpisah. Server menutup akses Guru dan portal terkait langsung lalu menghapus data otomatis/retry tanpa admin. Akun Google tidak dihapus dan tidak ada refund otomatis.
+
+Source tests contract/Cubit/widget disiapkan, **tidak dieksekusi**. Gunakan backend source terbaru untuk endpoint baru; lakukan hot restart Flutter secara manual setelah menerapkan source. Backend/build/simulator tidak dijalankan otomatis. Scope self-service saat ini Guru; penghapusan mandiri portal dan halaman web eksternal masih tindak lanjut rilis. [Kontrak dan batas verifikasi](../docs/API.md).
+
+## Panduan mulai mengajar untuk Guru
+
+Beranda Guru menampilkan checklist bidang belajar → siswa pertama → jadwal pertama → target belajar. Tombol Lanjut membuka form existing untuk langkah pertama yang belum selesai; membuka/membatalkan form tidak mencentang langkah. Progres dibaca dari `GET /teaching-guide`, bukan dihitung dari batch daftar Flutter atau disimpan sebagai flag selesai di perangkat. Data yang sudah ada, termasuk riwayat arsip/batal, tetap dikenali sebagai persiapan yang pernah dilakukan.
+
+Lewati sementara menyimpan preferensi ringkas per akun Guru melalui `PATCH /teaching-guide/preferences`. Beranda tetap menyediakan tautan Buka panduan; ketika empat langkah selesai, kartu otomatis ringkas. Pusat Bantuan dan topik mulai mengajar membuka `/teacher/getting-started`, dengan checklist lengkap serta langkah hubungkan Orang Tua yang opsional. Kembali dari form, pull-to-refresh, resume dan perubahan katalog memuat ulang data; state/error/race/dispose ditangani Cubit terpisah agar kegagalan panduan tidak menggagalkan dashboard. Tidak menyimpan progres palsu atau menandai langkah lewat tombol lokal.
+
+Detail sesi Guru memiliki petunjuk kontekstual presensi/laporan sesuai data sesi; tidak mengisi atau menyimpan keduanya otomatis. Portal Parent/Student tidak menerima checklist atau tindakan Guru. Header, artwork Home dan aturan paket tetap; panduan tidak memberi entitlement atau melewati paywall form. Source tests Flutter disiapkan tetapi tidak dijalankan. Backend terbaru diperlukan untuk endpoint ini; aplikasi/server tidak dijalankan otomatis. [Kontrak dan batas verifikasi](../docs/API.md).
+
+## Garis pemisah header tanpa celah tetap
+
+`NalaraHeader` menempatkan `bottomSpacing` di dalam header, **sebelum** divider. Garis abu-abu menjadi tepi terakhir header dan langsung berbatasan dengan viewport konten, sehingga tidak ada pita warna tema yang tetap menutupi kartu ketika scroll. Tinggi total header dan warna halaman tidak diubah. Berlaku melalui `NalaraPageLayout`, `NalaraPageScaffold`, `AsyncPage` dan `PagedListPage`, termasuk komposisi Guru/Orang Tua/Siswa. Header bertab Siswa/Jadwal/Presensi/Laporan tetap memakai divider TabBar dan overlap handler existing; Home dengan spacing 0 tetap sama.
+
+Ruang awal konten diletakkan **di dalam scroll view**, bukan di antara header dan viewport. Lainnya, daftar keluarga/bidang/rencana, notifikasi, profil Guru/Siswa serta detail siswa/rencana/target/sesi dan daftar permintaan jadwal memakai inset atas 16 logical px pada bagian yang sebelumnya terlalu rapat. Inset menghilang ketika digulir. Menu dengan padding atau intro yang sudah cukup, tab, form dan artwork Home dipertahankan agar tidak mendapat jarak ganda.
+
+Source tes geometri ditambahkan untuk spacing 0/14/28, batas viewport ketika scroll, warna halaman, safe area dan header tanpa divider. Tes Lainnya mengikuti menu existing termasuk Permintaan jadwal, jarak awal 16 px dan inset yang ikut scroll, bukan menambah menu baru. Verifikasi: Flutter analyze bersih; widget tests/build/aplikasi/backend/simulator tidak dijalankan. [Rincian](../docs/VERIFICATION.md).
+
+## Kesiapan SaaS dan backend notifikasi
+
+Hardening backend 18 Oktober menambahkan OTP atomik, validasi ulang penerima, retry push per perangkat dan rekonsiliasi pembayaran otomatis. Tidak mengubah payload login/OTP, endpoint inbox/read/read-all, token registration, notificationId/route atau harga/entitlement Flutter. Inbox siswa kini juga mengizinkan pengingat target H-1 miliknya. Source UI/Dart tidak diubah dalam batch backend ini; perubahan UI lain di workspace tetap dipertahankan.
+
+Target rilis: Google Play dan App Store. Pembelian store, opsi login iOS, signing/APNs, pengelolaan akun dan pengujian perangkat belum dinyatakan selesai. SingaPay existing tidak otomatis dipindahkan/dihapus atau dianggap memenuhi kebijakan kedua store. [Roadmap prioritas dan batas verifikasi](../docs/SAAS_ROADMAP.md). Backend/aplikasi/build/simulator tidak dijalankan otomatis.
+
+## Tema bersama dan audit UI
+
+Kontrol seluruh peran mengikuti `utils/app_theme.dart`: font Inter, krem/hijau, input, tombol, tab, checkbox/switch, indikator progress, dialog dan bottom sheet. Pemilih tanggal/jam menggunakan `shared/widgets/nalara_pickers.dart`; waktu memakai input 24 jam. Konfirmasi, kode referral, dan bantuan peran memakai `NalaraDialog` yang dapat discroll. Profil Orang Tua kini memakai `ProfilePage` bersama dengan header tetap dan data sesi portal, tanpa mengakses akun/API Guru. Detail sesi, informasi akun, riwayat progres, alat Pro dan langganan dirapikan dengan ikon lebih sedikit. [Hasil audit dan batas verifikasi](../docs/UI_AUDIT.md).
+
+## Tampilan error koneksi dan pemuatan data
+
+`shared/widgets/nalara_error_notice.dart` menyediakan `ErrorNotice` bersama untuk error server/koneksi dan pemuatan halaman. Komponen memakai aset asli `assets/Icon/Icon Ilustrasi Server Offline.png`, kartu rounded 26 px, latar krem lembut dan border dari `NalaraColors.errorSurface/errorBorder`, serta tombol “Coba lagi” hijau. Pesan backend dan callback retry halaman tetap diteruskan. Home Guru/Siswa, Home Orang Tua, daftar siswa/keluarga/jadwal/presensi/target/laporan/notifikasi/bidang belajar, detail, dan langganan memakai komponen yang sama. Jika data sebelumnya masih tersedia, varian `compact` mempertahankan ruang untuk konten; layar pendek dan teks besar tetap dapat discroll. Error validasi/simpan form tetap mengikuti feedback form masing-masing. Folder `assets/Icon/` sudah terdaftar pada pubspec.
+
 ## Portal Siswa: UI Guru, data pribadi siswa
 
 Beranda memakai `HomeDashboardView` yang sama dengan Guru, beserta header, hero, strip statistik, pemisah konten dan jadwal. Isinya nama/kelas siswa, Les hari ini, Progress target (null tetap —), Tugas baru, maksimal tiga sesi hari ini, preview rencana/progress dan laporan terbaru. Ringkasan berasal dari dashboard backend; tidak ada data contoh atau hitungan progres lokal. Home refresh melalui Cubit, pull-to-refresh, kembali ke Home dan resume.
@@ -63,7 +117,9 @@ Gambar onboarding memenuhi bagian atas layar dengan batas melengkung, sementara 
 
 Home mengikuti data source → model → repository domain → `LoadTeacherHome` → `DashboardCubit` → widget. Header memiliki NALARA, tanggal Indonesia dari `generatedAt` server dalam timezone Guru, notifikasi bertitik hanya jika ada unread, dan satu inisial nama Guru (API belum memiliki foto). Palet krem botanical senada onboarding, ikon status bar gelap, dan kontrol tetap di bawah inset aman meskipun gambar berada di belakang status bar. Strip tiga kartu pastel dengan ikon berlatar lingkaran diukur berdasarkan teks; Column mengikuti tinggi header/nama secara alami, sementara gambar berakhir tepat di tengah strip. Navigasi lima tab tetap menggunakan stateful shell, dengan sudut atas membulat/indikator hijau.
 
-Saat backend mengirim daftar hari ini kosong, `HomeEmptySchedule` menampilkan ilustrasi transparan `assets/Empty/Jadwal kosong.png`, judul/deskripsi dan tombol outline “Buat jadwal les” menuju route form yang sudah ada. Panel memakai border dashed rounded yang digambar Flutter, bukan edit asset. Folder Empty terdaftar di pubspec. Empty state tidak dipakai saat loading/error atau mengganti sesi yang tersedia; teks besar tetap dapat discroll.
+Saat backend mengirim daftar hari ini kosong, `HomeEmptySchedule` menampilkan ilustrasi transparan `assets/Empty/Jadwal kosong.png`, judul/deskripsi dan tombol outline “Buat jadwal les” menuju route form yang sudah ada. Ilustrasi berada di tengah langsung pada latar halaman, tanpa card atau bingkai putus-putus. Folder Empty terdaftar di pubspec. Empty state tidak mengganti sesi yang tersedia; teks besar tetap dapat discroll.
+
+Semua menu Guru, Orang Tua dan Siswa memakai empty state tanpa card, panel berwarna, border atau shadow. `NalaraEmptyState`/`EmptyNotice` memusatkan ilustrasi, pesan dan aksi; daftar kosong mengisi area konten yang tersisa dengan `SliverFillRemaining(hasScrollBody:false)`, sedangkan bagian kosong pada halaman campuran dipusatkan dalam bagiannya. Ilustrasi daftar siswa, keluarga, jadwal dan target memakai aset yang sesuai; laporan/notifikasi mempertahankan aset laporan yang tersedia. Empty state fitur Guru yang sudah borderless digunakan bersama portal, dan aksi tambah tetap mengikuti izin peran.
 
 Angka siswa aktif, seluruh sesi hari ini, dan laporan belum selesai berasal dari API, bukan panjang daftar preview. Preview diurutkan waktu/id dan dibatasi tiga, menampilkan jam/mata pelajaran/nama siswa/kelas tanpa ikon mata pelajaran. “Lihat semua” memakai `/teacher/schedule?period=day&date=yyyy-MM-dd&timezone=...`, memuat ulang filter jika tab Jadwal sebelumnya sudah terbuka. Ringkasan diperbarui saat pull-to-refresh, kembali ke Home, atau app resume ketika Home aktif. Loading tidak membuat nilai dummy; empty memakai nol/daftar kosong server, error menampilkan pesan dan retry. `generatedAt` invalid/missing menghasilkan error kontrak, tidak memakai jam perangkat. Backend source terbaru harus dipakai bersama Flutter ini.
 
