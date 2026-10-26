@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'utils/app_theme.dart';
@@ -13,17 +14,21 @@ import 'features/access/domain/entities/app_role.dart';
 import 'features/access/presentation/pages/role_selection_page.dart';
 import 'features/access/presentation/pages/referral_page.dart';
 import 'features/families/presentation/pages/families_pages.dart';
+import 'features/student_groups/presentation/student_groups_page.dart';
+import 'features/student_groups/presentation/student_group_form_page.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/dashboard/presentation/widgets/home_style.dart';
 import 'features/students/presentation/pages/students_pages.dart';
 import 'features/subjects/presentation/pages/subjects_pages.dart';
 import 'features/schedules/presentation/pages/schedules_pages.dart';
+import 'features/schedules/presentation/pages/schedule_repeat_page.dart';
 import 'features/learning_goals/presentation/pages/learning_pages.dart';
 import 'features/progress_history/presentation/pages/history_page.dart';
 import 'features/lesson_reports/presentation/pages/reports_pages.dart';
 import 'features/notifications/presentation/pages/notifications_page.dart';
 import 'features/profile/presentation/pages/more_pages.dart';
 import 'features/parent_portal/presentation/pages/parent_pages.dart';
+import 'features/parent_portal/presentation/pages/parent_help_page.dart';
 import 'features/parent_portal/presentation/pages/parent_dashboard_page.dart';
 import 'features/parent_portal/presentation/pages/parent_students_pages.dart';
 import 'features/parent_portal/presentation/pages/parent_learning_pages.dart';
@@ -36,14 +41,19 @@ import 'features/parent_portal/domain/repositories/parent_portal_repository.dart
 import 'features/student_portal/presentation/pages/student_pages.dart';
 import 'features/reschedule_requests/presentation/pages/reschedule_requests_page.dart';
 import 'shared/notifications/push_notification_service.dart';
+import 'features/notifications/presentation/bloc/notification_permission_cubit.dart';
+import 'features/notifications/presentation/widgets/notification_permission_host.dart';
 import 'features/subscription/presentation/subscription_cubit.dart';
 import 'features/subscription/presentation/subscription_page.dart';
+import 'features/subscription/presentation/payment_success_host.dart';
 import 'features/tutor_tools/domain/tutor_tools.dart';
 import 'features/tutor_tools/presentation/tutor_tools_pages.dart';
 import 'shared/network/api_client.dart';
 import 'shared/widgets/nalara_page_header.dart';
 import 'shared/widgets/page_widgets.dart';
 import 'features/teaching_guide/presentation/teaching_guide_page.dart';
+import 'features/teaching_guide/presentation/teaching_guide_cubit.dart';
+import 'features/teaching_guide/presentation/teaching_tutorial_host.dart';
 import 'features/account_deletion/presentation/account_deletion_page.dart';
 
 DateTime? _scheduleDate(String? value) {
@@ -195,6 +205,7 @@ GoRouter buildRouter(
         return entry(state);
       }
       if (!authenticated &&
+          !referral &&
           (path.startsWith('/parent/') || path.startsWith('/student/'))) {
         pendingRoute = route.uri.toString();
         return entry(state);
@@ -303,19 +314,26 @@ GoRouter buildRouter(
             routes: [
               GoRoute(
                 path: '/teacher/schedule',
-                builder: (_, state) => SchedulesPage(
-                  initialDate: _scheduleDate(state.uri.queryParameters['date']),
-                  initialPeriod:
-                      const {
-                        'day',
-                        'week',
-                        'month',
-                      }.contains(state.uri.queryParameters['period'])
-                      ? state.uri.queryParameters['period']!
-                      : 'day',
-                  timezone: _scheduleTimezone(
-                    state.uri.queryParameters['timezone'],
-                    auth.state.teacher?.timezone ?? 'Asia/Jakarta',
+                builder: (_, state) => BlocBuilder<AuthCubit, AuthState>(
+                  bloc: auth,
+                  buildWhen: (previous, current) =>
+                      previous.teacher?.timezone != current.teacher?.timezone,
+                  builder: (_, account) => SchedulesPage(
+                    initialDate: _scheduleDate(
+                      state.uri.queryParameters['date'],
+                    ),
+                    initialPeriod:
+                        const {
+                          'day',
+                          'week',
+                          'month',
+                        }.contains(state.uri.queryParameters['period'])
+                        ? state.uri.queryParameters['period']!
+                        : 'day',
+                    timezone: _scheduleTimezone(
+                      state.uri.queryParameters['timezone'],
+                      account.teacher?.timezone ?? 'Asia/Jakarta',
+                    ),
                   ),
                 ),
               ),
@@ -445,8 +463,10 @@ GoRouter buildRouter(
       ),
       GoRoute(
         path: '/teacher/students/:studentId',
-        builder: (_, state) =>
-            StudentDetailPage(id: state.pathParameters['studentId']!),
+        builder: (_, state) => StudentDetailPage(
+          id: state.pathParameters['studentId']!,
+          initialTab: state.uri.queryParameters['tab'],
+        ),
         routes: [
           GoRoute(
             path: 'edit',
@@ -463,14 +483,21 @@ GoRouter buildRouter(
       ),
       GoRoute(
         path: '/teacher/schedule/new',
-        builder: (_, state) =>
-            ScheduleFormPage(studentId: state.uri.queryParameters['studentId']),
+        builder: (_, state) => ScheduleFormPage(
+          studentId: state.uri.queryParameters['studentId'],
+          groupId: state.uri.queryParameters['groupId'],
+        ),
       ),
       GoRoute(
         path: '/teacher/schedule/:scheduleId',
         builder: (_, state) =>
             ScheduleDetailPage(id: state.pathParameters['scheduleId']!),
         routes: [
+          GoRoute(
+            path: 'repeat',
+            builder: (_, state) =>
+                ScheduleRepeatPage(id: state.pathParameters['scheduleId']!),
+          ),
           GoRoute(
             path: 'sessions',
             builder: (_, state) =>
@@ -551,6 +578,18 @@ GoRouter buildRouter(
         ],
       ),
       GoRoute(
+        path: '/teacher/student-groups',
+        builder: (_, _) => const StudentGroupsPage(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const StudentGroupFormPage()),
+          GoRoute(
+            path: ':groupId/edit',
+            builder: (_, state) =>
+                StudentGroupFormPage(id: state.pathParameters['groupId']!),
+          ),
+        ],
+      ),
+      GoRoute(
         path: '/teacher/subjects',
         builder: (_, _) => const SubjectsPage(),
         routes: [
@@ -564,13 +603,18 @@ GoRouter buildRouter(
       ),
       GoRoute(
         path: '/teacher/reports',
-        builder: (_, state) =>
-            ReportsPage(studentId: state.uri.queryParameters['studentId']),
+        builder: (_, state) => ReportsPage(
+          studentId: state.uri.queryParameters['studentId'],
+          initialStatus: state.uri.queryParameters['status'],
+        ),
         routes: [
           GoRoute(
             path: 'new',
             builder: (_, state) => ReportFormPage(
               sessionId: state.uri.queryParameters['sessionId'],
+              sessionIds:
+                  state.uri.queryParameters['sessionIds']?.split(',') ??
+                  const [],
             ),
           ),
           GoRoute(
@@ -686,6 +730,7 @@ GoRouter buildRouter(
         path: '/parent/students/:studentId',
         builder: (_, state) => ParentSharedStudentDetailPage(
           id: state.pathParameters['studentId']!,
+          initialTab: state.uri.queryParameters['tab'],
         ),
       ),
       GoRoute(
@@ -742,6 +787,7 @@ GoRouter buildRouter(
         path: '/parent/profile',
         builder: (_, _) => const ParentProfilePage(),
       ),
+      GoRoute(path: '/parent/help', builder: (_, _) => const ParentHelpPage()),
       GoRoute(
         path: '/student/sessions/:sessionId',
         builder: (_, state) =>
@@ -820,7 +866,9 @@ class _NalaraAppState extends State<NalaraApp> with WidgetsBindingObserver {
   late final auth = getIt<AuthCubit>();
   late final reset = getIt<PasswordResetCubit>();
   late final push = getIt<PushNotificationService>();
+  late final notificationPermission = getIt<NotificationPermissionCubit>();
   late final subscription = getIt<SubscriptionCubit>();
+  late final guide = getIt<TeachingGuideCubit>();
   late final refresh = AuthRouterRefresh(auth, reset, subscription);
   late final router = buildRouter(auth, refresh, reset, subscription);
   late final StreamSubscription<AuthState> _authSubscription;
@@ -859,9 +907,13 @@ class _NalaraAppState extends State<NalaraApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed &&
-        auth.state.status == AuthStatus.authenticated) {
-      unawaited(subscription.refresh(synchronizePayment: true));
+    if (state == AppLifecycleState.resumed) {
+      unawaited(notificationPermission.refresh());
+      // Re-read permission after changes in system settings, without prompting.
+      unawaited(_syncPush(auth.state));
+      if (auth.state.status == AuthStatus.authenticated) {
+        unawaited(subscription.refresh(synchronizePayment: true));
+      }
     }
   }
 
@@ -920,6 +972,7 @@ class _NalaraAppState extends State<NalaraApp> with WidgetsBindingObserver {
     _pushSubscription?.cancel();
     _authSubscription.cancel();
     _subscriptionStatus.cancel();
+    guide.close();
     router.dispose();
     refresh.dispose();
     super.dispose();
@@ -937,6 +990,54 @@ class _NalaraAppState extends State<NalaraApp> with WidgetsBindingObserver {
     ],
     debugShowCheckedModeBanner: false,
     theme: buildAppTheme(),
+    builder: (context, child) => BlocBuilder<AuthCubit, AuthState>(
+      bloc: auth,
+      builder: (context, state) =>
+          BlocBuilder<SubscriptionCubit, SubscriptionState>(
+            bloc: subscription,
+            builder: (context, plan) =>
+                BlocBuilder<
+                  NotificationPermissionCubit,
+                  NotificationPermissionState
+                >(
+                  bloc: notificationPermission,
+                  builder: (context, permission) => NotificationPermissionHost(
+                    cubit: notificationPermission,
+                    router: router,
+                    navigatorKey: _rootNavigatorKey,
+                    // Installation cleanup in AuthCubit.restore must finish before
+                    // reading the per-install decision (including iOS Keychain).
+                    enabled:
+                        (state.status == AuthStatus.unauthenticated ||
+                            state.status == AuthStatus.authenticated ||
+                            state.status == AuthStatus.portalAuthenticated) &&
+                        plan.confirmedPayment == null,
+                    child: PaymentSuccessHost(
+                      subscription: subscription,
+                      teacherId: state.status == AuthStatus.authenticated
+                          ? state.teacher?.id
+                          : null,
+                      child: TeachingTutorialHost(
+                        guide: guide,
+                        router: router,
+                        teacherId: state.status == AuthStatus.authenticated
+                            ? state.teacher?.id
+                            : null,
+                        enabled:
+                            state.status == AuthStatus.authenticated &&
+                            subscription.accountId == state.teacher?.id &&
+                            plan.value != null &&
+                            !plan.blocked &&
+                            plan.paywallFeature == null &&
+                            plan.confirmedPayment == null &&
+                            !permission.blocksTutorial,
+                        child: child ?? const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                ),
+          ),
+    ),
     routerConfig: router,
   );
 }

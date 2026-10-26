@@ -1,251 +1,345 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nalara/features/profile/presentation/pages/help_page.dart';
+import 'package:nalara/features/teaching_guide/domain/teaching_guide.dart';
 import 'package:nalara/features/teaching_guide/presentation/session_teaching_guide.dart';
 import 'package:nalara/features/teaching_guide/presentation/teaching_guide_card.dart';
 import 'package:nalara/features/teaching_guide/presentation/teaching_guide_cubit.dart';
-import 'package:nalara/features/teaching_guide/presentation/teaching_guide_page.dart';
-import 'package:nalara/shared/errors/app_failure.dart';
+import 'package:nalara/features/teaching_guide/presentation/teaching_tutorial_host.dart';
+import 'package:nalara/features/teaching_guide/presentation/teaching_tutorial_scope.dart';
+import 'package:nalara/features/teaching_guide/presentation/tutorial_completion_sheet.dart';
+import 'package:nalara/shared/widgets/nalara_celebration_sheet.dart';
 import 'package:nalara/utils/app_theme.dart';
-import 'package:nalara/utils/injector.dart';
 import 'teaching_guide_fixtures.dart';
 
 void main() {
   late TeachingGuideFake repository;
   late TeachingGuideCubit cubit;
-
   setUp(() {
     repository = TeachingGuideFake(guideValue());
     cubit = TeachingGuideCubit(repository);
   });
   tearDown(() async {
     await cubit.close();
-    await getIt.reset();
   });
 
-  Finder key(String name) => find.byKey(ValueKey('teaching-guide-$name'));
-  Future<void> card(
+  Future<GoRouter> renderTour(
     WidgetTester tester, {
-    bool inHome = true,
-    double scale = 1,
-    ValueChanged<String>? onOpen,
-    VoidCallback? onOpenGuide,
+    bool finalTarget = false,
   }) async {
-    await cubit.load();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildAppTheme(),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(scale)),
-          child: child!,
+    final resource = finalTarget ? 'targets' : 'students';
+    final anchor = finalTarget ? 'target' : 'student';
+    final root = '/teacher/$resource';
+    final router = GoRouter(
+      initialLocation: '/teacher/home',
+      routes: [
+        StatefulShellRoute.indexedStack(
+          builder: (_, _, shell) => Scaffold(body: shell),
+          branches: [
+            for (final path in ['/teacher/home', root, '/teacher/more'])
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: path,
+                    builder: (context, _) => Scaffold(
+                      body: Column(
+                        children: [
+                          Text(path),
+                          if (path == '/teacher/home')
+                            TutorialTarget(
+                              id: 'menu-$anchor',
+                              child: TextButton(
+                                onPressed: () => context.go(root),
+                                child: Text(finalTarget ? 'Target' : 'Siswa'),
+                              ),
+                            ),
+                          if (path == root)
+                            TutorialTarget(
+                              id: 'add-$anchor',
+                              child: TextButton(
+                                onPressed: () => context.push('$root/new'),
+                                child: Text(
+                                  finalTarget
+                                      ? 'Tambah target'
+                                      : 'Tambah siswa',
+                                ),
+                              ),
+                            ),
+                          const RemainingGuideBadge(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
         ),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(18),
-            child: TeachingGuideCard(
-              cubit: cubit,
-              inHome: inHome,
-              onOpen: onOpen ?? (_) {},
-              onOpenGuide: onOpenGuide ?? () {},
+        GoRoute(
+          path: '$root/new',
+          builder: (context, _) => Scaffold(
+            body: Column(
+              children: [
+                TutorialTarget(id: 'form-$anchor', child: const TextField()),
+                TutorialTarget(
+                  id: 'save-$anchor',
+                  child: TextButton(
+                    onPressed: () async {
+                      repository.value = guideValue(
+                        tutorialSeen: true,
+                        subject: true,
+                        student: true,
+                        schedule: finalTarget,
+                        target: finalTarget,
+                      );
+                      await cubit.load();
+                      if (context.mounted) context.pop();
+                    },
+                    child: const Text('Simpan'),
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      MaterialApp.router(
+        theme: buildAppTheme(),
+        routerConfig: router,
+        builder: (_, child) => TeachingTutorialHost(
+          guide: cubit,
+          router: router,
+          teacherId: 'teacher-a',
+          enabled: true,
+          child: child!,
         ),
       ),
     );
     await tester.pumpAndSettle();
+    return router;
   }
 
   testWidgets(
-    'next action is based on saved data, opening a form does not complete it',
+    'automatic first-use tour can be skipped without completing work',
     (tester) async {
-      repository.value = guideValue(subject: true, student: true);
-      final routes = <String>[];
-      await card(tester, onOpen: routes.add);
-      expect(find.text('2 dari 4 langkah selesai'), findsOneWidget);
-      await tester.ensureVisible(key('next'));
-      await tester.tap(key('next'));
-      await tester.pumpAndSettle();
-      expect(routes, ['/teacher/schedule/new']);
-      expect(cubit.state.value!.completedCount, 2);
-      expect(repository.saves, isEmpty);
-    },
-  );
-
-  testWidgets(
-    'skip collapses the guide, keeps progress and offers an explicit reopen',
-    (tester) async {
-      var opened = false;
       repository.value = guideValue(subject: true);
-      await card(tester, onOpenGuide: () => opened = true);
-      await tester.ensureVisible(key('dismiss'));
-      await tester.tap(key('dismiss'));
-      await tester.pumpAndSettle();
+      final router = await renderTour(tester);
+      expect(find.text('1/5'), findsOneWidget);
       expect(repository.saves, [true]);
-      expect(find.text('1 dari 4 langkah selesai'), findsOneWidget);
-      expect(key('next'), findsNothing);
-      await tester.ensureVisible(key('open'));
-      await tester.tap(key('open'));
-      expect(opened, isTrue);
+      expect(cubit.state.value!.remainingCount, 3);
+      await tester.tap(find.text('Lewati'));
+      await tester.pumpAndSettle();
+      expect(find.text('1/5'), findsNothing);
+      expect(cubit.state.value!.remainingCount, 3);
+      router.go('/teacher/more');
+      await tester.pumpAndSettle();
+      router.go('/teacher/home');
+      await tester.pumpAndSettle();
+      expect(find.text('1/5'), findsNothing);
     },
   );
 
-  testWidgets('completed setup is compact without requiring parent access', (
+  testWidgets('opening and cancelling a form never completes the tutorial', (
     tester,
   ) async {
+    repository.value = guideValue(subject: true);
+    final router = await renderTour(tester);
+    await tester.tap(find.byKey(const ValueKey('tutorial-next')));
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, '/teacher/students');
+    await tester.tap(find.byKey(const ValueKey('tutorial-next')));
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, '/teacher/students/new');
+    expect(find.text('3/5'), findsOneWidget);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(cubit.state.value!.hasStudent, isFalse);
+    expect(find.text('2/5'), findsOneWidget);
+  });
+
+  testWidgets(
+    'only a confirmed save finishes a tutorial and lowers the badge',
+    (tester) async {
+      repository.value = guideValue(subject: true);
+      await renderTour(tester);
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(const ValueKey('tutorial-next')));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('Tunjukkan tombol simpan'));
+      await tester.pumpAndSettle();
+      expect(find.text('4/5'), findsOneWidget);
+      await tester.tap(find.text('Simpan'));
+      await tester.pumpAndSettle();
+      expect(find.text('5/5'), findsOneWidget);
+      expect(cubit.state.value!.remainingCount, 2);
+      expect(find.byType(TutorialCompletionSheet), findsNothing);
+    },
+  );
+
+  testWidgets('completed tutors get no automatic tutorial', (tester) async {
     repository.value = guideValue(
       subject: true,
       student: true,
       schedule: true,
       target: true,
     );
-    await card(tester);
-    expect(find.text('Persiapan mengajar selesai'), findsOneWidget);
-    expect(key('open'), findsOneWidget);
-    expect(key('next'), findsNothing);
-    expect(key('families'), findsNothing);
+    await renderTour(tester);
+    expect(find.text('1/5'), findsNothing);
+    expect(repository.saves, isEmpty);
+    expect(find.byType(TutorialCompletionSheet), findsNothing);
+  });
+
+  for (final dismissal in ['artwork tap', 'outside tap', 'downward drag']) {
+    testWidgets(
+      'final success sheet and confetti open together and close by $dismissal',
+      (tester) async {
+        repository.value = guideValue(
+          subject: true,
+          student: true,
+          schedule: true,
+        );
+        await renderTour(tester, finalTarget: true);
+        for (var i = 0; i < 3; i++) {
+          await tester.tap(find.byKey(const ValueKey('tutorial-next')));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text('Tunjukkan tombol simpan'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Simpan'));
+        await tester.pump();
+        expect(
+          find.byKey(const ValueKey('tutorial-completion-sheet')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('tutorial-completion-confetti')),
+          findsOneWidget,
+        );
+        expect(cubit.state.value!.remainingCount, 0);
+        final artwork = find.byWidgetPredicate(
+          (widget) =>
+              widget is Image &&
+              widget.image is AssetImage &&
+              (widget.image as AssetImage).assetName ==
+                  TutorialCompletionSheet.artwork,
+        );
+        expect(artwork, findsOneWidget);
+        expect(find.byIcon(Icons.close_rounded), findsNothing);
+        expect(find.byIcon(Icons.close), findsNothing);
+        await tester.pumpAndSettle();
+        final sheetState = tester.state(find.byType(NalaraCelebrationSheet));
+        await cubit.load();
+        await tester.pump();
+        expect(
+          tester.state(find.byType(NalaraCelebrationSheet)),
+          same(sheetState),
+        );
+        switch (dismissal) {
+          case 'artwork tap':
+            await tester.tap(artwork);
+          case 'outside tap':
+            await tester.tapAt(const Offset(12, 12));
+          case 'downward drag':
+            await tester.drag(
+              find.byKey(const ValueKey('tutorial-completion-drag-handle')),
+              const Offset(0, 550),
+            );
+        }
+        await tester.pumpAndSettle();
+        expect(find.byType(TutorialCompletionSheet), findsNothing);
+        expect(
+          find.byKey(const ValueKey('tutorial-completion-confetti')),
+          findsNothing,
+        );
+        expect(cubit.state.value!.remainingCount, 0);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('editing hint provides an Overlay for the skip tooltip', (
+    tester,
+  ) async {
+    repository.value = guideValue(subject: true);
+    await renderTour(tester);
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byKey(const ValueKey('tutorial-next')));
+      await tester.pumpAndSettle();
+    }
+    final skip = find.byWidgetPredicate(
+      (widget) => widget is IconButton && widget.tooltip == 'Lewati panduan',
+    );
+    expect(skip, findsOneWidget);
+    expect(Overlay.maybeOf(tester.element(skip)), isNotNull);
+    await tester.longPress(skip);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.tap(skip);
+    await tester.pumpAndSettle();
+    expect(skip, findsNothing);
+    expect(cubit.state.value!.remainingCount, 3);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-    'backend error never fabricates progress or successful dismissal',
+    'checklist starts an unfinished tutorial and has no Home toggles',
     (tester) async {
-      repository.loadError = const AppFailure('Panduan belum tersedia.');
-      await card(tester);
-      expect(find.text('Panduan belum tersedia.'), findsOneWidget);
-      expect(key('progress'), findsNothing);
-      repository.loadError = null;
-      await tester.tap(key('retry'));
-      await tester.pumpAndSettle();
-      repository.saveError = const AppFailure('Pilihan gagal disimpan.');
-      await tester.ensureVisible(key('dismiss'));
-      await tester.tap(key('dismiss'));
-      await tester.pumpAndSettle();
-      expect(find.text('Pilihan gagal disimpan.'), findsOneWidget);
-      expect(key('next'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'full page reloads from backend after cancel/save and supports direct back entry',
-    (tester) async {
-      getIt.registerFactory(() => TeachingGuideCubit(repository));
-      final router = GoRouter(
-        initialLocation: '/teacher/getting-started',
-        routes: [
-          GoRoute(
-            path: '/teacher/getting-started',
-            builder: (_, _) => const TeachingGuidePage(),
-          ),
-          GoRoute(
-            path: '/teacher/subjects/new',
-            builder: (context, _) => Scaffold(
-              body: Column(
-                children: [
-                  TextButton(
-                    onPressed: () => context.pop(),
-                    child: const Text('Batal'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      repository.value = guideValue(subject: true);
-                      context.pop();
-                    },
-                    child: const Text('Simpan bidang'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          GoRoute(
-            path: '/teacher/home',
-            builder: (_, _) => const Scaffold(body: Text('Beranda')),
-          ),
-        ],
+      repository.value = guideValue(
+        subject: true,
+        student: true,
+        schedule: true,
       );
-      addTearDown(router.dispose);
-      await tester.pumpWidget(
-        MaterialApp.router(theme: buildAppTheme(), routerConfig: router),
-      );
-      await tester.pumpAndSettle();
-      for (final action in ['Batal', 'Simpan bidang']) {
-        await tester.ensureVisible(key('next'));
-        await tester.tap(key('next'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(action));
-        await tester.pumpAndSettle();
-        expect(
-          find.text('${action == 'Batal' ? 0 : 1} dari 4 langkah selesai'),
-          findsOneWidget,
-        );
-      }
-      expect(repository.reads, 3);
-      expect(key('families'), findsOneWidget);
-      await tester.tap(find.byTooltip('Kembali'));
-      await tester.pumpAndSettle();
-      expect(router.state.uri.path, '/teacher/home');
-    },
-  );
-
-  testWidgets(
-    'full checklist and actions remain scrollable at 320px with large text',
-    (tester) async {
-      tester.view.physicalSize = const Size(320, 640);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await card(tester, inHome: false, scale: 2);
-      await tester.ensureVisible(key('next'));
-      expect(tester.takeException(), isNull);
-      await tester.ensureVisible(key('families'));
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets('parent/student Help never offers teacher setup actions', (
-    tester,
-  ) async {
-    for (final role in ['parent', 'student']) {
+      await cubit.load();
+      TeachingGuideStep? selected;
       await tester.pumpWidget(
         MaterialApp(
           theme: buildAppTheme(),
-          home: HelpPage(routePrefix: '/$role'),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('help-open-teaching-guide')),
-        findsNothing,
-      );
-    }
-  });
-
-  testWidgets(
-    'session guidance follows attendance/report state without writing anything',
-    (tester) async {
-      Future<void> render(bool attendance, bool report) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SessionTeachingGuide(
-                attendanceRecorded: attendance,
-                reportPublished: report,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TeachingGuideCard(
+                cubit: cubit,
+                onOpen: (_) {},
+                onStart: (step) => selected = step,
               ),
             ),
           ),
-        );
-      }
-
-      await render(false, false);
-      expect(
-        find.textContaining('Setelah pertemuan berlangsung'),
-        findsOneWidget,
+        ),
       );
-      await render(true, false);
-      expect(find.textContaining('Presensi sudah dicatat'), findsOneWidget);
-      await render(true, true);
-      expect(find.text('Panduan sesi'), findsNothing);
+      final next = find.byKey(const ValueKey('teaching-guide-next'));
+      await tester.ensureVisible(next);
+      await tester.tap(next);
+      expect(selected, TeachingGuideStep.target);
+      expect(cubit.state.value!.remainingCount, 1);
+      expect(find.textContaining('di Beranda'), findsNothing);
     },
   );
+
+  testWidgets('session guidance follows recorded attendance and reports', (
+    tester,
+  ) async {
+    Future<void> render(bool attendance, bool report) => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SessionTeachingGuide(
+            attendanceRecorded: attendance,
+            reportPublished: report,
+          ),
+        ),
+      ),
+    );
+    await render(false, false);
+    expect(
+      find.textContaining('Setelah pertemuan berlangsung'),
+      findsOneWidget,
+    );
+    await render(true, false);
+    expect(find.textContaining('Presensi sudah dicatat'), findsOneWidget);
+    await render(true, true);
+    expect(find.text('Panduan sesi'), findsNothing);
+  });
 }

@@ -6,7 +6,8 @@ abstract final class StudentDetailStyle {
       green = Color(0xFF155A49),
       ink = Color(0xFF10182B),
       muted = Color(0xFF7A7F89),
-      paleGreen = Color(0xFFEBF2E9);
+      paleGreen = Color(0xFFEBF2E9),
+      line = Color(0xFFE7EAE4);
   static const artwork = 'assets/Icon/Icon lainnya.png';
   static const body = TextStyle(
     fontFamily: 'NalaraInter',

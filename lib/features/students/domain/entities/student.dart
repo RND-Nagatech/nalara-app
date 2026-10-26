@@ -2,7 +2,7 @@ import '../../../access/domain/entities/referral_invitation.dart';
 
 class Student {
   final String id, name, grade, notes, status;
-  final String? familyId;
+  final String? familyId, avatarId;
   final StudentLearningSummary? learningSummary;
   const Student({
     required this.id,
@@ -11,6 +11,7 @@ class Student {
     required this.notes,
     required this.status,
     this.familyId,
+    this.avatarId,
     this.learningSummary,
   });
 }

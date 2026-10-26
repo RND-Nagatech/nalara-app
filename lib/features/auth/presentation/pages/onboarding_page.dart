@@ -136,9 +136,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (auth.status == AuthStatus.failure)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            color: _cream,
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
                             child: ErrorNotice(
                               auth.error ?? 'Sesi belum dapat dipulihkan.',
                               retry: getIt<AuthCubit>().restore,

@@ -21,7 +21,13 @@ class MoreMenuItem {
 class MoreMenuTile extends StatelessWidget {
   final MoreMenuItem item;
   final VoidCallback onTap;
-  const MoreMenuTile({super.key, required this.item, required this.onTap});
+  final Widget? trailing;
+  const MoreMenuTile({
+    super.key,
+    required this.item,
+    required this.onTap,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -115,6 +121,7 @@ class MoreMenuTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
+                if (trailing != null) ...[trailing!, const SizedBox(width: 8)],
                 const ExcludeSemantics(
                   child: Icon(
                     Icons.chevron_right_rounded,

@@ -38,7 +38,7 @@ abstract final class FamilyFormStyle {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFFEFEFE),
+      fillColor: Colors.white,
       isDense: true,
       hintStyle: input.copyWith(color: muted),
       counterStyle: input.copyWith(fontSize: 12, color: muted),

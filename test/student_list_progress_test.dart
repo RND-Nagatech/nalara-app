@@ -4,6 +4,8 @@ import 'package:nalara/features/students/data/models/student_model.dart';
 import 'package:nalara/features/students/domain/entities/student.dart';
 import 'package:nalara/features/students/presentation/widgets/student_list_card.dart';
 import 'package:nalara/features/students/presentation/widgets/student_list_progress_bar.dart';
+import 'package:nalara/features/students/presentation/widgets/students_style.dart';
+import 'package:nalara/shared/widgets/nalara_progress_bar.dart';
 import 'package:nalara/utils/app_theme.dart';
 
 Map<String, dynamic> record({int? progress = 53, int count = 3}) => {
@@ -122,6 +124,37 @@ void main() {
       await render(tester, StudentModel(legacy).toEntity());
       expect(find.text('Progres belum tersedia'), findsOneWidget);
       expect(find.text('0%'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'short student rows are compact with a smaller avatar and a single green progress fill',
+    (tester) async {
+      final value = record(progress: 30);
+      (value['learningSummary'] as Map<String, dynamic>)['subjectNames'] = [
+        'Matematika',
+      ];
+      await render(tester, StudentModel(value).toEntity());
+      expect(
+        tester.getSize(find.byType(StudentListCard)).height,
+        lessThanOrEqualTo(110),
+      );
+      expect(
+        tester.getSize(find.byKey(const ValueKey('student-avatar-s1'))).width,
+        StudentsStyle.listAvatarSize,
+      );
+      final bar = tester.widget<NalaraProgressBar>(
+        find.byType(NalaraProgressBar),
+      );
+      expect(bar.progress, 30);
+      expect(bar.height, 6);
+      expect(bar.accentColor, isNull);
+      expect(bar.backgroundColor, StudentsStyle.listProgressTrack);
+      expect(
+        find.byKey(const ValueKey('nalara-progress-accent')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
     },
   );
 

@@ -84,7 +84,7 @@ ThemeData buildAppTheme() => ThemeData(
   ),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
-    fillColor: NalaraColors.field,
+    fillColor: NalaraColors.surface,
     border: _inputBorder,
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),

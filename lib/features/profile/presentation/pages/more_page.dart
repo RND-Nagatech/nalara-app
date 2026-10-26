@@ -2,11 +2,21 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/nalara_header.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
+import '../../../lesson_reports/presentation/widgets/draft_reports_menu_tile.dart';
 import '../widgets/more_header.dart';
 import '../widgets/more_menu_tile.dart';
 import '../widgets/more_style.dart';
+import '../widgets/profile_completion_badge.dart';
 
 const _items = [
+  MoreMenuItem(
+    id: 'teaching-guide',
+    title: 'Panduan mulai mengajar',
+    description: 'Lanjutkan tutorial langkah demi langkah',
+    route: '/teacher/getting-started',
+    icon: Icons.school_outlined,
+  ),
   MoreMenuItem(
     id: 'reschedule-requests',
     title: 'Permintaan jadwal',
@@ -20,6 +30,13 @@ const _items = [
     description: 'Kelola data orang tua dan anggota keluarga siswa',
     route: '/teacher/families',
     icon: Icons.family_restroom_rounded,
+  ),
+  MoreMenuItem(
+    id: 'student-groups',
+    title: 'Grup siswa',
+    description: 'Simpan kelompok siswa untuk jadwal les rutin',
+    route: '/teacher/student-groups',
+    icon: Icons.groups_rounded,
   ),
   MoreMenuItem(
     id: 'materials',
@@ -125,11 +142,27 @@ class MorePage extends StatelessWidget {
                   itemBuilder: (context, index) {
                     if (index.isOdd) return const SizedBox(height: 10);
                     final item = items[index ~/ 2];
-                    return MoreMenuTile(
+                    if (item.route == '/teacher/reports') {
+                      return DraftReportsMenuTile(
+                        item: item,
+                        onOpen: (route) => context.push(route),
+                      );
+                    }
+                    final tile = MoreMenuTile(
                       key: ValueKey('more-menu-${item.id}'),
                       item: item,
+                      trailing: item.id == 'teaching-guide'
+                          ? const RemainingGuideBadge()
+                          : item.route == '/teacher/profile'
+                          ? const ProfileCompletionBadge(
+                              key: ValueKey('more-profile-completion'),
+                            )
+                          : null,
                       onTap: () => context.push(item.route),
                     );
+                    return item.id == 'subjects'
+                        ? TutorialTarget(id: 'menu-subject-entry', child: tile)
+                        : tile;
                   },
                 ),
               ),

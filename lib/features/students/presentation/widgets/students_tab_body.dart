@@ -100,7 +100,10 @@ class StudentsTabBody extends StatelessWidget {
                               ),
                               if (index < data.items.length - 1)
                                 const Padding(
-                                  padding: EdgeInsets.only(left: 86, right: 14),
+                                  padding: EdgeInsets.only(
+                                    left: StudentsStyle.listDividerInset,
+                                    right: 16,
+                                  ),
                                   child: Divider(
                                     height: 1,
                                     color: StudentsStyle.listDivider,

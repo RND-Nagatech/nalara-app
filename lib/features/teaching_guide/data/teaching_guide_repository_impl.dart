@@ -11,6 +11,6 @@ class TeachingGuideRepositoryImpl implements TeachingGuideRepository {
       TeachingGuideModel(await source.get()).toEntity();
 
   @override
-  Future<bool> setDismissed(bool dismissed) async =>
-      TeachingGuideModel(await source.setDismissed(dismissed)).dismissed;
+  Future<bool> acknowledgeTutorial() async =>
+      TeachingGuideModel(await source.acknowledgeTutorial()).tutorialSeen;
 }

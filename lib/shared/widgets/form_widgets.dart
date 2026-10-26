@@ -101,6 +101,7 @@ String statusLabel(String status) =>
       'present': 'Hadir',
       'excused': 'Izin',
       'absent': 'Tidak hadir',
+      'mixed': 'Presensi beragam',
       'draft': 'Draft',
       'published': 'Terbit',
       'teacher': 'Internal Guru',

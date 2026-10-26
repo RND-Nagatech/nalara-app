@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/nalara_header.dart';
 import '../../../../shared/widgets/nalara_empty_state.dart';
 import '../../../../shared/widgets/nalara_surface_card.dart';
+import '../../../../shared/widgets/teacher_bottom_navigation.dart';
+import '../../../../shared/widgets/parent_bottom_navigation.dart';
+import '../../../../shared/widgets/student_bottom_navigation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/form_widgets.dart';
+import '../../../../shared/widgets/feedback_notice.dart';
+import '../../../../utils/app_links.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../bloc/help_center_cubit.dart';
 import '../content/help_topics.dart';
 import '../widgets/help_center_header.dart';
@@ -30,6 +36,7 @@ class HelpPage extends StatefulWidget {
 class _HelpPageState extends State<HelpPage> {
   late final _cubit = HelpCenterCubit(topics: widget.topics);
   final _search = TextEditingController();
+  bool _navigationInFlight = false;
 
   @override
   void dispose() {
@@ -43,9 +50,42 @@ class _HelpPageState extends State<HelpPage> {
     _cubit.search('');
   }
 
-  void _open(String route) {
+  Future<void> _open(String route) async {
+    if (_navigationInFlight) return;
+    _navigationInFlight = true;
     FocusScope.of(context).unfocus();
-    context.push(route);
+    try {
+      if (isTeacherShellLocation(route) ||
+          parentNavigationLocations.contains(route) ||
+          studentNavigationLocations.contains(route)) {
+        context.go(route);
+      } else {
+        await context.push(route);
+      }
+    } finally {
+      _navigationInFlight = false;
+    }
+  }
+
+  Future<void> _openSupport() async {
+    if (_navigationInFlight) return;
+    _navigationInFlight = true;
+    try {
+      final launched = await launchUrl(
+        Uri.parse(AppLinks.supportUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        await showNalaraNotice(
+          context,
+          'Halaman support belum dapat dibuka. Coba lagi atau hubungi helpdesk.nagatech@gmail.com.',
+          title: 'Support belum terbuka',
+          type: NalaraNoticeType.error,
+        );
+      }
+    } finally {
+      _navigationInFlight = false;
+    }
   }
 
   @override
@@ -136,7 +176,7 @@ class _HelpPageState extends State<HelpPage> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Lanjutkan langkah persiapan bidang belajar, siswa, jadwal, dan target Anda.',
+                    'Temukan tutorial interaktif di Lainnya → Panduan mulai mengajar untuk menyiapkan bidang belajar, siswa, jadwal, dan target.',
                     style: HelpCenterStyle.body,
                   ),
                   const SizedBox(height: 8),
@@ -215,6 +255,8 @@ class _HelpPageState extends State<HelpPage> {
               ),
           const SizedBox(height: 14),
           _privacy(),
+          const SizedBox(height: 14),
+          _support(),
         ],
       ),
     );
@@ -259,14 +301,75 @@ class _HelpPageState extends State<HelpPage> {
             onPressed: () => _open('/legal/kebijakan-privasi'),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 10),
-              foregroundColor: HelpCenterStyle.ink,
+              foregroundColor: HelpCenterStyle.green,
               overlayColor: Colors.transparent,
               textStyle: HelpCenterStyle.body.copyWith(
-                color: HelpCenterStyle.ink,
+                color: HelpCenterStyle.green,
                 fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: HelpCenterStyle.green,
               ),
             ),
-            child: const Text('Baca kebijakan privasi'),
+            child: Text(
+              'Baca kebijakan privasi',
+              style: HelpCenterStyle.body.copyWith(
+                color: HelpCenterStyle.green,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: HelpCenterStyle.green,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _support() => Padding(
+    key: const ValueKey('help-support'),
+    padding: const EdgeInsets.fromLTRB(0, 4, 0, 2),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Butuh bantuan langsung?',
+          style: HelpCenterStyle.body.copyWith(
+            color: HelpCenterStyle.ink,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Hubungi tim NALARA untuk kendala akun, jadwal, pembayaran, atau masalah teknis lainnya.',
+          style: HelpCenterStyle.body,
+        ),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            key: const ValueKey('help-open-support'),
+            onPressed: _openSupport,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              foregroundColor: HelpCenterStyle.green,
+              overlayColor: Colors.transparent,
+              textStyle: HelpCenterStyle.body.copyWith(
+                color: HelpCenterStyle.green,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: HelpCenterStyle.green,
+              ),
+            ),
+            child: Text(
+              'Hubungi Support NALARA',
+              style: HelpCenterStyle.body.copyWith(
+                color: HelpCenterStyle.green,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: HelpCenterStyle.green,
+              ),
+            ),
           ),
         ),
       ],

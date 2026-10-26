@@ -5,6 +5,7 @@ import '../../../students/presentation/pages/students_list_page.dart';
 import '../../../students/presentation/pages/student_detail_page.dart';
 import '../../domain/repositories/parent_portal_repository.dart';
 import '../../domain/usecases/load_parent_student_overview.dart';
+import '../../../tuition_fees/domain/tuition_repository.dart';
 
 class ParentSharedStudentsPage extends StatelessWidget {
   const ParentSharedStudentsPage({super.key});
@@ -18,12 +19,19 @@ class ParentSharedStudentsPage extends StatelessWidget {
 
 class ParentSharedStudentDetailPage extends StatelessWidget {
   final String id;
-  const ParentSharedStudentDetailPage({super.key, required this.id});
+  final String? initialTab;
+  const ParentSharedStudentDetailPage({
+    super.key,
+    required this.id,
+    this.initialTab,
+  });
   @override
   Widget build(BuildContext context) => StudentDetailPage(
     id: id,
     loader: LoadParentStudentOverview(getIt<ParentPortalRepository>()),
     readOnly: true,
     routePrefix: '/parent',
+    initialTab: initialTab,
+    tuitionReader: getIt<TuitionReader>(instanceName: 'parent'),
   );
 }

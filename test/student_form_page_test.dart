@@ -202,7 +202,7 @@ void main() {
         isA<AssetImage>().having(
           (asset) => asset.assetName,
           'asset',
-          'assets/Icon/Icon lainnya.png',
+          'assets/data siswa/data siswa.png',
         ),
       );
       for (final field in [

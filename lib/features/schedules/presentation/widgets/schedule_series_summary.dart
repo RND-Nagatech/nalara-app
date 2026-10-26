@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/domain/app_timezones.dart';
 import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/nalara_card_style.dart';
 import '../../../../utils/date_time_utils.dart';
 import '../../domain/entities/lesson.dart';
 import 'session_detail_style.dart';
+import 'schedule_repeat_fields.dart';
 
 class ScheduleSeriesSummary extends StatelessWidget {
   final Schedule schedule;
@@ -12,6 +14,13 @@ class ScheduleSeriesSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SessionSectionCard(
     children: [
+      if (schedule.participantCount > 1) ...[
+        Text(
+          'Sesi kelompok · ${schedule.participantCount} siswa',
+          style: _value,
+        ),
+        _divider(),
+      ],
       _row(
         Icons.calendar_month_outlined,
         'Pertemuan awal',
@@ -25,7 +34,9 @@ class ScheduleSeriesSummary extends StatelessWidget {
         Icons.sync_rounded,
         'Pola',
         Text(
-          schedule.recurrence == 'weekly'
+          schedule.repeat != null
+              ? '${repeatDaysLabel(schedule.repeat!.days)}\n${repeatEndLabel(schedule.repeat!)}'
+              : schedule.recurrence == 'weekly'
               ? 'Mingguan · ${schedule.repeatCount} pertemuan'
               : 'Satu pertemuan',
           style: _value,
@@ -35,7 +46,7 @@ class ScheduleSeriesSummary extends StatelessWidget {
       _row(
         Icons.schedule_rounded,
         'Zona waktu',
-        Text(schedule.timezone, style: _value),
+        Text(AppTimezones.label(schedule.timezone), style: _value),
       ),
       _divider(),
       _row(
@@ -54,6 +65,18 @@ class ScheduleSeriesSummary extends StatelessWidget {
           ),
         ),
       ),
+      if (schedule.status == 'cancelled') ...[
+        _divider(),
+        const Text(
+          'Alasan pembatalan',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          schedule.cancellationReason ?? 'Alasan pembatalan belum dicatat.',
+          style: _value,
+        ),
+      ],
     ],
   );
 

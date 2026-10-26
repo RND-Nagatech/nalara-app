@@ -7,6 +7,7 @@ const studentDetailTabLabels = [
   'Riwayat sesi',
   'Laporan belajar',
   'Orang Tua & keluarga',
+  'Biaya bimbel',
   'Kode referral',
 ];
 

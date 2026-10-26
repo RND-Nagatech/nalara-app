@@ -24,6 +24,7 @@ Lesson _lesson({
   String attendance = 'pending',
   String studentName = 'Alya',
   String subjectName = 'Piano',
+  String? cancellationReason,
 }) => Lesson(
   id: 'session-1',
   scheduleId: 'schedule-1',
@@ -35,6 +36,7 @@ Lesson _lesson({
   attendance: attendance,
   studentName: studentName,
   subjectName: subjectName,
+  cancellationReason: cancellationReason,
 );
 
 class _Schedules implements SchedulesRepository {
@@ -77,9 +79,13 @@ class _Schedules implements SchedulesRepository {
   }
 
   @override
-  Future<void> cancelSession(String id) async {
+  Future<void> cancelSession(String id, String reason) async {
     writes.add((id, 'cancelled'));
-    lesson = _lesson(status: 'cancelled', attendance: 'cancelled');
+    lesson = _lesson(
+      status: 'cancelled',
+      attendance: 'cancelled',
+      cancellationReason: reason,
+    );
   }
 
   @override
@@ -195,6 +201,39 @@ void main() {
     },
   );
 
+  testWidgets(
+    'cancelled session exposes the public reason in both read-only portals',
+    (tester) async {
+      viewport(tester);
+      schedules.lesson = _lesson(
+        status: 'cancelled',
+        attendance: 'cancelled',
+        cancellationReason: 'Guru sedang sakit.',
+      );
+      for (final role in ['parent', 'student']) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: buildAppTheme(),
+            home: SessionDetailPage(
+              key: ValueKey(role),
+              id: 'session-1',
+              readOnly: true,
+              routePrefix: '/$role',
+              allowSeriesNavigation: false,
+              loadOverview: load.call,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Alasan pembatalan'), findsOneWidget);
+        expect(find.text('Guru sedang sakit.'), findsOneWidget);
+        expect(key('cancel'), findsNothing);
+        expect(find.text('Simpan presensi'), findsNothing);
+      }
+      expect(schedules.writes, isEmpty);
+    },
+  );
+
   test(
     'overview keeps canonical names, real series timezone and scoped report snapshot',
     () async {
@@ -292,10 +331,15 @@ void main() {
       await render(tester);
       await tap(tester, key('cancel'));
       expect(schedules.writes, isEmpty);
-      await tap(tester, find.text('Batal'));
+      await tap(tester, find.text('Tidak jadi'));
       expect(schedules.writes, isEmpty);
       await tap(tester, key('cancel'));
+      await tester.enterText(
+        find.byKey(const ValueKey('cancel-reason')),
+        'Guru sedang sakit.',
+      );
       await tap(tester, find.text('Lanjutkan'));
+      await tap(tester, find.text('Ya, batalkan pertemuan'));
       await drainNotice(tester);
       expect(schedules.writes, [('session-1', 'cancelled')]);
       expect(key('manage-card'), findsNothing);

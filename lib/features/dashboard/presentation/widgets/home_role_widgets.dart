@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/nalara_card_style.dart';
+import '../../../../shared/widgets/nalara_avatar.dart';
 import 'home_backdrop.dart';
 import 'home_style.dart';
 
 class HomeRoleHeader extends StatelessWidget {
   final String name;
+  final String? avatarId;
   final String date;
   final int unreadNotifications;
   final VoidCallback onProfile;
@@ -15,6 +17,7 @@ class HomeRoleHeader extends StatelessWidget {
   const HomeRoleHeader({
     super.key,
     required this.name,
+    this.avatarId,
     required this.date,
     required this.unreadNotifications,
     required this.onProfile,
@@ -24,14 +27,6 @@ class HomeRoleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final words = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .toList();
-    final initials = words.isEmpty
-        ? ''
-        : words.first.characters.first.toUpperCase();
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 18, 18, 8),
       child: Row(
@@ -94,19 +89,13 @@ class HomeRoleHeader extends StatelessWidget {
                 border: Border.all(color: const Color(0xBFFFFFFF)),
               ),
               alignment: Alignment.center,
-              child: initials.isEmpty
-                  ? const Icon(Icons.person_outline, size: 22)
-                  : FittedBox(
-                      child: Text(
-                        initials,
-                        style: const TextStyle(
-                          fontFamily: 'NalaraInter',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 18,
-                          color: HomeStyle.green,
-                        ),
-                      ),
-                    ),
+              child: NalaraAvatar(
+                name: name,
+                avatarId: avatarId,
+                size: 40,
+                maxInitials: 1,
+                backgroundColor: const Color(0xFFE0E9DF),
+              ),
             ),
           ),
         ],
@@ -193,7 +182,11 @@ class HomeRoleHero extends StatelessWidget {
                     children: [
                       Text(greeting, style: HomeStyle.greeting),
                       const SizedBox(height: 5),
-                      Text(name, style: HomeStyle.name),
+                      Text(
+                        name,
+                        key: const ValueKey('home-teacher-name'),
+                        style: HomeStyle.name,
+                      ),
                       const SizedBox(height: 8),
                       Text(supporting, style: HomeStyle.supporting),
                     ],
@@ -204,6 +197,7 @@ class HomeRoleHero extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: inset),
                 child: ConstrainedBox(
+                  key: const ValueKey('home-summary-strip'),
                   // Keep the cards aligned to the measured height when the
                   // labels fit, but let the row grow if text wraps at a
                   // narrow width or a larger accessibility text scale.
@@ -212,10 +206,21 @@ class HomeRoleHero extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        for (var index = 0; index < metrics.length; index++) ...[
+                        for (
+                          var index = 0;
+                          index < metrics.length;
+                          index++
+                        ) ...[
                           if (index > 0) const SizedBox(width: gap),
                           Expanded(
-                            child: _HomeRoleMetricCard(metric: metrics[index]),
+                            child: _HomeRoleMetricCard(
+                              key: ValueKey(switch (index) {
+                                0 => 'home-active-students',
+                                1 => 'home-today-count',
+                                _ => 'home-pending-reports',
+                              }),
+                              metric: metrics[index],
+                            ),
                           ),
                         ],
                       ],
@@ -233,7 +238,7 @@ class HomeRoleHero extends StatelessWidget {
 
 class _HomeRoleMetricCard extends StatelessWidget {
   final HomeRoleMetric metric;
-  const _HomeRoleMetricCard({required this.metric});
+  const _HomeRoleMetricCard({super.key, required this.metric});
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -252,6 +257,7 @@ class _HomeRoleMetricCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 48,

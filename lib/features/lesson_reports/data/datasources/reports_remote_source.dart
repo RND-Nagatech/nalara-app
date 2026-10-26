@@ -12,6 +12,10 @@ class ReportsRemoteSource {
     String sessionId,
     Map<String, dynamic> data,
   ) => api.post(ApiConstants.sessionReports(sessionId), data);
+  Future<Map<String, dynamic>> createBatch(
+    String sessionId,
+    Map<String, dynamic> data,
+  ) => api.post('${ApiConstants.sessionReports(sessionId)}/batch', data);
   Future<void> update(
     String sessionId,
     String id,

@@ -14,7 +14,7 @@ import 'package:nalara/utils/constants.dart';
 import 'teaching_guide_fixtures.dart';
 
 Map<String, dynamic> _json() => {
-  'dismissed': false,
+  'tutorialSeen': false,
   'hasSubject': true,
   'hasStudent': true,
   'hasSchedule': false,
@@ -43,7 +43,7 @@ void main() {
       expect(existing.isComplete, isTrue);
       expect(existing.parentConnected, isFalse);
       expect(existing.nextStep, isNull);
-      expect(partial.withDismissed(true).completedCount, 2);
+      expect(partial.withTutorialSeen(true).completedCount, 2);
     },
   );
 
@@ -69,7 +69,7 @@ void main() {
   );
 
   test(
-    'remote source uses central endpoints and sends only dismissal preference',
+    'remote source uses central endpoints and only acknowledges the tutorial',
     () async {
       final dio = Dio();
       addTearDown(() => dio.close(force: true));
@@ -84,7 +84,7 @@ void main() {
                 statusCode: 200,
                 data: {
                   'data': options.method == 'PATCH'
-                      ? {'dismissed': true}
+                      ? {'tutorialSeen': true}
                       : _json(),
                 },
               ),
@@ -98,25 +98,25 @@ void main() {
         TeachingGuideRemoteSource(ApiClient(dio, tokens)),
       );
       expect((await repo.get()).nextStep, TeachingGuideStep.schedule);
-      expect(await repo.setDismissed(true), isTrue);
+      expect(await repo.acknowledgeTutorial(), isTrue);
       expect(requests.first.path, ApiConstants.teachingGuide);
       expect(requests.last.path, ApiConstants.teachingGuidePreferences);
-      expect(requests.last.data, {'dismissed': true});
+      expect(requests.last.data, {'tutorialSeen': true});
       expect(requests.first.headers['Authorization'], 'Bearer teacher-token');
     },
   );
 
   test(
-    'recreating the cubit restores server progress and skip preference',
+    'recreating the cubit restores server milestones and tutorial acknowledgement',
     () async {
       final repo = TeachingGuideFake(guideValue(subject: true, student: true));
       final first = TeachingGuideCubit(repo);
       await first.load();
-      await first.setDismissed(true);
+      await first.acknowledgeTutorial();
       await first.close();
       final restored = TeachingGuideCubit(repo);
       await restored.load();
-      expect(restored.state.value!.dismissed, isTrue);
+      expect(restored.state.value!.tutorialSeen, isTrue);
       expect(restored.state.value!.nextStep, TeachingGuideStep.schedule);
       await restored.close();
     },
@@ -141,23 +141,23 @@ void main() {
   );
 
   test(
-    'failed skip never hides the guide and duplicate saves are ignored',
+    'failed acknowledgement retains backend errors and ignores duplicate writes',
     () async {
       final repo = TeachingGuideFake(guideValue())
         ..saveError = const AppFailure('Pilihan belum tersimpan.');
       final cubit = TeachingGuideCubit(repo);
       await cubit.load();
-      await cubit.setDismissed(true);
-      expect(cubit.state.value!.dismissed, isFalse);
+      await cubit.acknowledgeTutorial();
+      expect(cubit.state.value!.tutorialSeen, isFalse);
       expect(cubit.state.error, 'Pilihan belum tersimpan.');
       repo.saveError = null;
       repo.pendingSave = Completer<bool>();
-      final save = cubit.setDismissed(true);
-      await cubit.setDismissed(false);
+      final save = cubit.acknowledgeTutorial();
+      await cubit.acknowledgeTutorial();
       expect(repo.saves, [true, true]);
       repo.pendingSave!.complete(true);
       await save;
-      expect(cubit.state.value!.dismissed, isTrue);
+      expect(cubit.state.value!.tutorialSeen, isTrue);
       await cubit.close();
     },
   );
@@ -187,21 +187,41 @@ void main() {
   );
 
   test(
-    'refresh during skip waits until preference is saved and then gets current progress',
+    'refresh during acknowledgement waits and then reloads server milestones',
     () async {
       final repo = TeachingGuideFake(guideValue())
         ..pendingSave = Completer<bool>();
       final cubit = TeachingGuideCubit(repo);
       await cubit.load();
-      final save = cubit.setDismissed(true);
+      final save = cubit.acknowledgeTutorial();
       repo.value = guideValue(subject: true);
       await cubit.load();
       expect(repo.reads, 1);
       repo.pendingSave!.complete(true);
       await save;
       expect(repo.reads, 2);
-      expect(cubit.state.value!.dismissed, isTrue);
+      expect(cubit.state.value!.tutorialSeen, isTrue);
       expect(cubit.state.value!.hasSubject, isTrue);
+      await cubit.close();
+    },
+  );
+
+  test(
+    'account reset rejects late responses from the previous teacher',
+    () async {
+      final old = Completer<TeachingGuide>();
+      final repo = TeachingGuideFake(guideValue())..pendingReads.add(old);
+      final cubit = TeachingGuideCubit(repo);
+      final pending = cubit.load();
+      cubit.reset();
+      repo.value = guideValue(subject: true);
+      await cubit.load();
+      old.complete(
+        guideValue(subject: true, student: true, schedule: true, target: true),
+      );
+      await pending;
+      expect(cubit.state.value!.remainingCount, 3);
+      expect(cubit.state.value!.tutorialSeen, isFalse);
       await cubit.close();
     },
   );

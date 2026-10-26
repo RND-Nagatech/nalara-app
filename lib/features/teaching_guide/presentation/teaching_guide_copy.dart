@@ -10,13 +10,13 @@ extension TeachingGuideCopy on TeachingGuideStep {
 
   String get description => switch (this) {
     TeachingGuideStep.subject =>
-      'Tentukan yang Anda ajarkan, seperti Matematika, Piano, atau Bahasa Inggris.',
+      'Isi nama bidang yang Anda ajarkan, seperti Matematika, Piano, atau Bahasa Inggris.',
     TeachingGuideStep.student =>
-      'Simpan data siswa yang akan mengikuti kegiatan belajar.',
+      'Masukkan nama siswa, kelas atau tingkat, dan catatan jika diperlukan. Pilih keluarga yang sesuai apabila sudah tersedia.',
     TeachingGuideStep.schedule =>
-      'Pilih siswa, bidang belajar, dan waktu pertemuannya.',
+      'Pilih siswa satu per satu atau dari Grup siswa, lalu isi bidang belajar serta tanggal dan jam. Zona waktu mengikuti Pengaturan; ketuk Ubah bila perlu. Untuk jadwal rutin, aktifkan Ulangi setiap minggu dan pilih hari serta batas pengulangannya.',
     TeachingGuideStep.target =>
-      'Tentukan hasil belajar yang ingin dicapai bersama siswa.',
+      'Isi nama rencana, pilih siswa dan bidang belajar, lalu tentukan periode, target, dan indikator hasil belajarnya.',
   };
 
   String route({required bool completed}) => switch (this) {

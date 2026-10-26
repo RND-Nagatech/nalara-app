@@ -3,7 +3,15 @@ import '../../../../shared/domain/page.dart';
 import '../../domain/entities/student_overview.dart';
 import '../../domain/usecases/load_student_overview.dart';
 
-enum StudentDetailTab { summary, plans, sessions, reports, family, referral }
+enum StudentDetailTab {
+  summary,
+  plans,
+  sessions,
+  reports,
+  family,
+  tuition,
+  referral,
+}
 
 class StudentDetailState {
   final StudentOverview? data;

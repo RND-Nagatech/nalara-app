@@ -74,13 +74,8 @@ class DetailStudentsFake extends StudentsRepositoryFake {
     requests.add('invite:$id');
     if (actionError != null) throw actionError!;
     if (respondInvite != null) return await respondInvite!();
-    final expiresAt = DateTime.utc(2035, 1, 1);
-    codes = [ParentInvitation(id: 'code', expiresAt: expiresAt)];
-    return ParentInvitation(
-      id: 'code',
-      token: 'NL-TEST-STUDENT',
-      expiresAt: expiresAt,
-    );
+    codes = [const ParentInvitation(id: 'code')];
+    return ParentInvitation(id: 'code', token: 'NL-TEST-STUDENT');
   }
 
   @override

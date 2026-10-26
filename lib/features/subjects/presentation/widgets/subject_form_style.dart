@@ -18,7 +18,7 @@ abstract final class SubjectFormStyle {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFFEFEFE),
+      fillColor: Colors.white,
       hintStyle: const TextStyle(color: muted, fontSize: 14, height: 1.45),
       counterStyle: const TextStyle(color: muted, fontSize: 11, height: 1.5),
       contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16),

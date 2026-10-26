@@ -8,6 +8,7 @@ import 'package:nalara/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:nalara/features/auth/presentation/pages/auth_form_page.dart';
 import 'package:nalara/features/auth/presentation/pages/legal_document_page.dart';
 import 'package:nalara/features/auth/presentation/widgets/auth_palette.dart';
+import 'package:nalara/features/auth/presentation/widgets/login_header.dart';
 import 'package:nalara/features/auth/presentation/widgets/plain_text_action.dart';
 import 'package:nalara/features/auth/presentation/widgets/terms_consent.dart';
 import 'package:nalara/utils/app_theme.dart';
@@ -160,13 +161,58 @@ Future<void> acceptTerms(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'asset is confined to header; lower form and safe bottom match onboarding',
+    'login header grows with large text and keeps the method actions plain',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      bool? changed;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: MediaQuery(
+            data: const MediaQueryData(
+              padding: EdgeInsets.only(top: 24),
+              textScaler: TextScaler.linear(2),
+            ),
+            child: Scaffold(
+              body: SingleChildScrollView(
+                child: LoginHeader(
+                  usePhone: false,
+                  enabled: true,
+                  onChanged: (value) => changed = value,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Selamat datang kembali'), findsOneWidget);
+      final phone = find.byKey(const ValueKey('auth-login-tab-Nomor HP'));
+      await tester.ensureVisible(phone);
+      await tester.tap(phone);
+      expect(changed, isTrue);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'login uses the register logo and real welcome text; safe bottom matches onboarding',
     (tester) async {
       await mountForm(tester);
       final image = tester.widget<Image>(
-        find.byKey(const ValueKey('auth-login-header-art')),
+        find.byKey(const ValueKey('auth-login-logo')),
       );
-      expect((image.image as AssetImage).assetName, 'assets/Login/Login.png');
+      expect((image.image as AssetImage).assetName, 'assets/Logo/LOGO.png');
+      expect(image.fit, BoxFit.contain);
+      expect(find.text('Selamat datang kembali'), findsOneWidget);
+      expect(
+        find.text('Masuk untuk melanjutkan\nperjalanan belajar.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('auth-login-header-art')), findsNothing);
       expect(find.byType(Image), findsOneWidget);
       expect(
         tester.getSize(find.byKey(const ValueKey('auth-login-header'))).height,
@@ -277,6 +323,26 @@ void main() {
       '081234567890',
     );
   });
+  testWidgets(
+    'login stays disabled until the active identifier and password are filled',
+    (tester) async {
+      await mountForm(tester);
+
+      FilledButton submit() => tester.widget<FilledButton>(authField('submit'));
+
+      expect(submit().onPressed, isNull);
+      await tester.enterText(authField('email'), 'guru@example.test');
+      expect(submit().onPressed, isNull);
+      await tester.enterText(authField('password'), 'StrongPassword123!');
+      expect(submit().onPressed, isNotNull);
+
+      await tester.tap(find.text('Nomor HP'));
+      await tester.pumpAndSettle();
+      expect(submit().onPressed, isNull);
+      await tester.enterText(authField('phone'), '081234567890');
+      expect(submit().onPressed, isNotNull);
+    },
+  );
   testWidgets(
     'phone login passes remember choice and renders authoritative backend errors',
     (tester) async {

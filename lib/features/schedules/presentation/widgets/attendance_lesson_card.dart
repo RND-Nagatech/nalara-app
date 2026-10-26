@@ -121,7 +121,9 @@ class AttendanceLessonCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: Text(
-                          statusLabel(lesson.attendance),
+                          lesson.isGroup
+                              ? lesson.attendanceSummary
+                              : statusLabel(lesson.attendance),
                           style: _body.copyWith(
                             color: foreground,
                             fontWeight: FontWeight.w500,

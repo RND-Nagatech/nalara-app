@@ -7,6 +7,9 @@ import '../../../../shared/widgets/nalara_pickers.dart';
 import '../../../../utils/date_time_utils.dart';
 import '../../../../utils/injector.dart';
 import '../../../../utils/validators.dart';
+import '../../../../utils/color.dart';
+import '../../../reschedule_requests/presentation/bloc/reschedule_submission_cubit.dart';
+import '../../../reschedule_requests/presentation/widgets/reschedule_form_sheet.dart';
 import '../../../schedules/domain/entities/schedule_calendar.dart';
 import '../../../schedules/domain/entities/schedule_period.dart';
 import '../../../schedules/domain/entities/session_overview.dart';
@@ -37,6 +40,11 @@ class ParentSharedSessionDetailPage extends StatelessWidget {
       return router == null || router.state.uri.path == expectedPath;
     }
 
+    // A request may have been submitted on another device since this page loaded.
+    final latest = await loadOverview(data.lesson.id);
+    if (!context.mounted || !current()) return false;
+    if (latest.reschedulePending == true) return true;
+
     return await showModalBottomSheet<bool>(
           context: context,
           isScrollControlled: true,
@@ -45,10 +53,13 @@ class ParentSharedSessionDetailPage extends StatelessWidget {
           enableDrag: false,
           showDragHandle: true,
           backgroundColor: SessionDetailStyle.cream,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
           builder: (context) => Theme(
             data: SessionDetailStyle.theme(Theme.of(context)),
             child: _ParentRescheduleSheet(
-              data: data,
+              data: latest,
               repository: getIt<ParentPortalRepository>(),
               isCurrent: current,
             ),
@@ -87,7 +98,7 @@ class _ParentRescheduleSheet extends StatefulWidget {
 class _ParentRescheduleSheetState extends State<_ParentRescheduleSheet> {
   final _form = GlobalKey<FormState>();
   final _reason = TextEditingController();
-  final _submit = SubmitCubit();
+  final _submit = RescheduleSubmissionCubit();
   late final LoadCubit<List<ParentRescheduleSlot>> _slots;
   late DateTime _date;
   String? _slotId;
@@ -138,7 +149,7 @@ class _ParentRescheduleSheetState extends State<_ParentRescheduleSheet> {
   }
 
   Future<void> _pickDate() async {
-    if (!_current || _submit.state.busy || _pickingDate) return;
+    if (!_current || _submit.state.locked || _pickingDate) return;
     final today = ScheduleCalendar.localDate(DateTime.now(), _timezone);
     final initial = _date.isBefore(today) ? today : _date;
     setState(() => _pickingDate = true);
@@ -164,28 +175,36 @@ class _ParentRescheduleSheetState extends State<_ParentRescheduleSheet> {
   }
 
   Future<void> _refreshSlots() async {
-    if (_current && !_submit.state.busy) await _slots.load();
+    if (_current && !_submit.state.locked) await _slots.load();
   }
 
   Future<void> _send() async {
     if (!_current ||
-        _submit.state.busy ||
+        _submit.state.locked ||
         _slots.state.status != LoadStatus.success ||
         !(_form.currentState?.validate() ?? false)) {
       return;
     }
     final slot = _selectedSlot;
     if (slot == null) return;
-    final ok = await _submit.run(
+    final ok = await _submit.send(
       () => widget.repository.requestReschedule(
         widget.data.lesson.id,
         slot.startAt,
         slot.endAt,
         _reason.text.trim(),
       ),
+      () async =>
+          (await widget.repository.sessionOverview(
+            widget.data.lesson.id,
+          )).reschedulePending ==
+          true,
     );
+    if (!mounted || !ok) return;
+    // Let PopScope rebuild to the non-busy state before popping this sheet.
+    await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
-    if (ok && _current) Navigator.of(context).pop(true);
+    if (_current) Navigator.of(context).pop(true);
   }
 
   @override
@@ -195,99 +214,139 @@ class _ParentRescheduleSheetState extends State<_ParentRescheduleSheet> {
         LoadState<List<ParentRescheduleSlot>>
       >(
         bloc: _slots,
-        builder: (context, slots) => BlocBuilder<SubmitCubit, SubmitState>(
-          bloc: _submit,
-          builder: (context, submit) => PopScope(
-            canPop: !submit.busy,
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.viewInsetsOf(context).bottom,
-              ),
-              child: SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        builder: (context, slots) =>
+            BlocBuilder<RescheduleSubmissionCubit, RescheduleSubmissionState>(
+              bloc: _submit,
+              builder: (context, submit) => PopScope(
+                canPop: !submit.busy,
+                child: RescheduleFormSheet(
+                  title: 'Ubah jadwal les',
+                  description:
+                      'Pilih waktu pengganti untuk ${widget.data.lesson.studentName.isEmpty ? 'sesi ini' : widget.data.lesson.studentName}. Zona waktu: $_timezone.',
+                  closeKey: const ValueKey('parent-reschedule-cancel'),
+                  onClose: submit.busy
+                      ? null
+                      : () => Navigator.of(context).pop(submit.waiting),
                   child: Form(
                     key: _form,
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
-                          'Minta ganti tanggal',
-                          style: SessionDetailStyle.title,
+                          'Tanggal baru',
+                          style: RescheduleFormSheet.labelStyle,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Pilih tanggal dan jam yang tersedia ($_timezone). '
-                          'Guru akan meninjau permintaan Anda.',
-                          style: SessionDetailStyle.body,
-                        ),
-                        const SizedBox(height: 18),
-                        OutlinedButton.icon(
+                        const SizedBox(height: 7),
+                        OutlinedButton(
                           key: const ValueKey('parent-reschedule-date'),
-                          onPressed: submit.busy || _pickingDate
+                          onPressed: submit.locked || _pickingDate
                               ? null
                               : _pickDate,
-                          icon: const Icon(Icons.calendar_month_outlined),
-                          label: Text(
-                            'Tanggal: ${DateTimeUtils.date(DateTimeUtils.fromWallTime(_date, 0, 0, _timezone), _timezone)}',
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: NalaraColors.field,
+                            foregroundColor: NalaraColors.ink,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: const BorderSide(color: NalaraColors.line),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  DateTimeUtils.date(
+                                    DateTimeUtils.fromWallTime(
+                                      _date,
+                                      0,
+                                      0,
+                                      _timezone,
+                                    ),
+                                    _timezone,
+                                  ),
+                                ),
+                              ),
+                              const Icon(
+                                Icons.expand_more_rounded,
+                                size: 20,
+                                color: NalaraColors.muted,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 14),
-                        _slotField(slots, submit.busy),
+                        const SizedBox(height: 12),
+                        _slotField(slots, submit.locked),
                         const SizedBox(height: 16),
+                        const Text(
+                          'Alasan perubahan',
+                          style: RescheduleFormSheet.labelStyle,
+                        ),
+                        const SizedBox(height: 7),
                         TextFormField(
                           key: const ValueKey('parent-reschedule-reason'),
                           controller: _reason,
-                          enabled: !submit.busy,
-                          minLines: 3,
-                          maxLines: 5,
+                          enabled: !submit.locked,
+                          minLines: 2,
+                          maxLines: 4,
                           maxLength: 500,
-                          decoration: const InputDecoration(
-                            labelText: 'Alasan perubahan jadwal',
-                            hintText: 'Contoh: anak sedang sakit',
-                            alignLabelWithHint: true,
+                          style: SessionDetailStyle.body.copyWith(
+                            color: NalaraColors.ink,
+                          ),
+                          decoration: RescheduleFormSheet.input(
+                            'Contoh: anak sedang sakit',
                           ),
                           validator: Validators.requiredText,
                         ),
                         if (submit.error != null) ...[
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 6),
                           Text(
                             submit.error!,
                             key: const ValueKey('parent-reschedule-error'),
                             style: SessionDetailStyle.body.copyWith(
-                              color: SessionDetailStyle.red,
+                              color: NalaraColors.danger,
                             ),
                           ),
                         ],
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Jadwal awal tetap berlaku sampai Guru menyetujui perubahan.',
+                          style: SessionDetailStyle.body,
+                        ),
+                        const SizedBox(height: 18),
                         FilledButton(
                           key: const ValueKey('parent-reschedule-send'),
                           onPressed:
-                              submit.busy ||
+                              submit.locked ||
                                   _pickingDate ||
                                   slots.status != LoadStatus.success ||
-                                  slots.value?.isNotEmpty != true
+                                  _selectedSlot == null
                               ? null
                               : _send,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: NalaraColors.green,
+                            minimumSize: const Size(48, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
                           child: submit.busy
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
+                                    color: Colors.white,
                                   ),
                                 )
-                              : const Text('Kirim permintaan ke Guru'),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          key: const ValueKey('parent-reschedule-cancel'),
-                          onPressed: submit.busy
-                              ? null
-                              : () => Navigator.of(context).pop(false),
-                          child: const Text('Batal'),
+                              : Text(
+                                  submit.waiting
+                                      ? 'Menunggu tanggapan Guru'
+                                      : 'Kirim permintaan ke Guru',
+                                ),
                         ),
                       ],
                     ),
@@ -295,42 +354,63 @@ class _ParentRescheduleSheetState extends State<_ParentRescheduleSheet> {
                 ),
               ),
             ),
-          ),
-        ),
       );
 
   Widget _slotField(
     LoadState<List<ParentRescheduleSlot>> state,
-    bool busy,
+    bool locked,
   ) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      Row(
+        children: [
+          const Expanded(
+            child: Text('Jam tersedia', style: RescheduleFormSheet.labelStyle),
+          ),
+          IconButton(
+            key: const ValueKey('parent-reschedule-slots-refresh'),
+            tooltip: 'Muat ulang pilihan waktu',
+            onPressed: locked || state.status == LoadStatus.loading
+                ? null
+                : _refreshSlots,
+            icon: const Icon(Icons.refresh_rounded, size: 19),
+            style: IconButton.styleFrom(foregroundColor: NalaraColors.green),
+          ),
+        ],
+      ),
       if (state.status == LoadStatus.loading)
         const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: LinearProgressIndicator(),
+          padding: EdgeInsets.only(bottom: 10),
+          child: LinearProgressIndicator(minHeight: 2),
         ),
       if (state.status == LoadStatus.error)
-        Text(
-          state.error!,
-          key: const ValueKey('parent-reschedule-slots-error'),
-          style: SessionDetailStyle.body.copyWith(
-            color: SessionDetailStyle.red,
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            state.error!,
+            key: const ValueKey('parent-reschedule-slots-error'),
+            style: SessionDetailStyle.body.copyWith(color: NalaraColors.danger),
           ),
         ),
       if (state.status == LoadStatus.success && state.value!.isEmpty)
-        const Text(
-          'Belum ada slot yang tersedia pada tanggal ini. Pilih tanggal lain.',
-          key: ValueKey('parent-reschedule-slots-empty'),
-          style: SessionDetailStyle.body,
+        const Padding(
+          padding: EdgeInsets.only(bottom: 10),
+          child: Text(
+            'Tidak ada waktu tersedia. Coba tanggal lain.',
+            key: ValueKey('parent-reschedule-slots-empty'),
+            style: SessionDetailStyle.body,
+          ),
         ),
       NalaraDropdown<String>(
         key: const ValueKey('parent-reschedule-slot'),
         value: _slotId,
-        enabled: !busy && state.status == LoadStatus.success,
+        enabled:
+            !locked &&
+            state.status == LoadStatus.success &&
+            state.value?.isNotEmpty == true,
         menuTitle: 'Pilih jam yang tersedia',
         hint: 'Pilih jam yang tersedia',
-        decoration: const InputDecoration(labelText: 'Jam tersedia'),
+        decoration: RescheduleFormSheet.input('Pilih jam yang tersedia'),
         options: [
           for (final slot in state.value ?? <ParentRescheduleSlot>[])
             NalaraDropdownOption(
@@ -343,17 +423,6 @@ class _ParentRescheduleSheetState extends State<_ParentRescheduleSheet> {
         validator: (value) => value == null || _selectedSlot == null
             ? 'Pilih jam yang tersedia'
             : null,
-      ),
-      Align(
-        alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          key: const ValueKey('parent-reschedule-slots-refresh'),
-          onPressed: busy || state.status == LoadStatus.loading
-              ? null
-              : _refreshSlots,
-          icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: const Text('Muat ulang pilihan waktu'),
-        ),
       ),
     ],
   );

@@ -12,6 +12,7 @@ import 'package:nalara/features/students/data/repositories/students_repository_i
 import 'package:nalara/shared/domain/page.dart';
 import 'package:nalara/shared/network/api_client.dart';
 import 'package:nalara/shared/network/token_store.dart';
+import 'package:nalara/features/access/data/models/referral_invitation_model.dart';
 
 class FamiliesStub extends FamiliesRemoteSource {
   Map<String, dynamic>? fields;
@@ -61,6 +62,27 @@ class PagedFamilies extends FamiliesRepository {
 }
 
 void main() {
+  test(
+    'unlimited family code maps nullable expiry and reusable last-use metadata',
+    () {
+      final invitation = ReferralInvitationModel({
+        '_id': 'current-family-code',
+        'audience': 'parent',
+        'expiresAt': null,
+        'lastUsedAt': '2026-10-19T00:00:00Z',
+      }).toEntity();
+      expect(invitation.expiresAt, isNull);
+      expect(invitation.lastUsedAt, DateTime.utc(2026, 10, 19));
+      expect(invitation.revokedAt, isNull);
+      expect(
+        ReferralInvitationModel({
+          '_id': 'code',
+          'audience': 'student',
+        }).toEntity().expiresAt,
+        isNull,
+      );
+    },
+  );
   test(
     'family repository sends all siblings once and server optimistic version on edit',
     () async {

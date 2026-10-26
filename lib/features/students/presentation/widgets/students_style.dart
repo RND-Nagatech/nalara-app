@@ -8,6 +8,15 @@ abstract final class StudentsStyle {
       line = Color(0xFFEAE5DB),
       listDivider = Color(0xFFB7D8CA);
   static const emptyArtwork = 'assets/Empty/empty siswa.png';
+  static const listRowPadding = EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 14,
+  );
+  static const listAvatarSize = 44.0;
+  static const listAvatarGap = 12.0;
+  static const listProgressTrack = Color(0xFFE7EFEA);
+  static const listProgressHeight = 6.0;
+  static const listDividerInset = 16 + listAvatarSize + listAvatarGap;
   static const title = TextStyle(
     fontFamily: 'NalaraInter',
     fontSize: 27,

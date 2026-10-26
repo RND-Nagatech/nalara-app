@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../shared/state/load_cubit.dart';
+import '../../../shared/state/teaching_catalog_refresh.dart';
 import '../../../shared/widgets/form_widgets.dart';
 import '../../../shared/widgets/nalara_dropdown.dart';
 import '../../../shared/widgets/nalara_page_header.dart';
@@ -13,9 +14,12 @@ import '../../../shared/widgets/page_widgets.dart';
 import '../../../utils/color.dart';
 import '../../../utils/injector.dart';
 import '../../subscription/presentation/subscription_cubit.dart';
-import '../domain/load_tutor_catalog.dart';
+import '../domain/load_activity_options.dart';
 import '../domain/tutor_tools.dart';
 import 'branding_logo_card.dart';
+import 'notification_preference_tile.dart';
+import 'activity_recipients_cubit.dart';
+import 'activity_recipients_fields.dart';
 
 Widget toolCard(Widget child) => Padding(
   padding: const EdgeInsets.only(bottom: 14),
@@ -430,32 +434,91 @@ class _AnswerEditorState extends State<_AnswerEditor> {
   );
 }
 
-class ActivityFormPage extends StatefulWidget {
+class ActivityFormPage extends StatelessWidget {
   final LearningActivity? activity;
   const ActivityFormPage({super.key, this.activity});
   @override
-  State<ActivityFormPage> createState() => _ActivityFormPageState();
-}
-
-class _ActivityFormPageState extends State<ActivityFormPage> {
-  late final Future<TutorCatalog> Function() _load =
-      getIt<LoadTutorCatalog>().call;
-  @override
   Widget build(BuildContext context) => ProToolsGate(
     feature: 'assignments',
-    child: AsyncPage<TutorCatalog>(
-      title: widget.activity == null ? 'Tambah aktivitas' : 'Edit aktivitas',
-      load: _load,
-      builder: (context, catalog, reload) =>
-          _ActivityEditor(catalog: catalog, activity: widget.activity),
+    child: _ActivityFormBody(activity: activity),
+  );
+}
+
+class _ActivityFormBody extends StatefulWidget {
+  final LearningActivity? activity;
+  const _ActivityFormBody({this.activity});
+  @override
+  State<_ActivityFormBody> createState() => _ActivityFormBodyState();
+}
+
+class _ActivityFormBodyState extends State<_ActivityFormBody>
+    with TeachingCatalogRefresh<_ActivityFormBody> {
+  late final _loader = LoadCubit<ActivityOptions>(
+    () => getIt<LoadActivityOptions>()(includeGroups: widget.activity == null),
+  )..load();
+  @override
+  void onTeachingCatalogChanged() => _loader.load();
+  @override
+  void didUpdateWidget(covariant _ActivityFormBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activity?.id != widget.activity?.id) _loader.load();
+  }
+
+  @override
+  void dispose() {
+    _loader.close();
+    super.dispose();
+  }
+
+  Future<void> _manageGroups() async {
+    await context.push('/teacher/student-groups');
+    if (mounted) await _loader.load();
+  }
+
+  @override
+  Widget build(BuildContext context) => NalaraPageScaffold(
+    title: widget.activity == null ? 'Tambah aktivitas' : 'Edit aktivitas',
+    body: BlocBuilder<LoadCubit<ActivityOptions>, LoadState<ActivityOptions>>(
+      bloc: _loader,
+      builder: (context, state) {
+        final catalog = state.value;
+        if (catalog == null) {
+          return state.error != null
+              ? ErrorNotice(state.error!, retry: _loader.load)
+              : const Center(child: CircularProgressIndicator());
+        }
+        return RefreshIndicator(
+          onRefresh: _loader.load,
+          child: _ActivityEditor(
+            key: ValueKey(widget.activity?.id ?? 'new-activity'),
+            catalog: catalog,
+            activity: widget.activity,
+            catalogError: state.error,
+            catalogLoading: state.status == LoadStatus.loading,
+            reload: _loader.load,
+            manageGroups: _manageGroups,
+          ),
+        );
+      },
     ),
   );
 }
 
 class _ActivityEditor extends StatefulWidget {
-  final TutorCatalog catalog;
+  final ActivityOptions catalog;
   final LearningActivity? activity;
-  const _ActivityEditor({required this.catalog, this.activity});
+  final String? catalogError;
+  final bool catalogLoading;
+  final VoidCallback reload, manageGroups;
+  const _ActivityEditor({
+    super.key,
+    required this.catalog,
+    this.activity,
+    this.catalogError,
+    required this.catalogLoading,
+    required this.reload,
+    required this.manageGroups,
+  });
   @override
   State<_ActivityEditor> createState() => _ActivityEditorState();
 }
@@ -464,17 +527,29 @@ class _ActivityEditorState extends State<_ActivityEditor> {
   final _form = GlobalKey<FormState>(), _submit = SubmitCubit();
   late final _title = TextEditingController(text: widget.activity?.title),
       _content = TextEditingController(text: widget.activity?.content);
-  late String? _student = widget.activity?.studentId,
-      _subject = widget.activity?.subjectId;
+  late String? _subject = widget.activity?.subjectId;
+  late final _recipients = ActivityRecipientsCubit(
+    widget.catalog,
+    studentId: widget.activity?.studentId,
+  );
   late String _kind = widget.activity?.kind ?? 'task',
       _status = widget.activity?.status ?? 'draft',
       _visibility = widget.activity?.visibility ?? 'shared';
   late DateTime? _due = widget.activity?.dueAt;
   @override
+  void didUpdateWidget(covariant _ActivityEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.catalog != widget.catalog) {
+      _recipients.updateOptions(widget.catalog);
+    }
+  }
+
+  @override
   void dispose() {
     _title.dispose();
     _content.dispose();
     _submit.close();
+    _recipients.close();
     super.dispose();
   }
 
@@ -487,138 +562,183 @@ class _ActivityEditorState extends State<_ActivityEditor> {
     padding: const EdgeInsets.only(bottom: 18),
     child: NalaraDropdown<String>(
       value: value,
-      options: values
-          .map((v) => NalaraDropdownOption(value: v.$1, label: v.$2))
-          .toList(),
+      options: [
+        for (final v in values) NalaraDropdownOption(value: v.$1, label: v.$2),
+        if (value != null && !values.any((v) => v.$1 == value))
+          NalaraDropdownOption(
+            value: value,
+            label: '$label tidak lagi tersedia',
+            enabled: false,
+          ),
+      ],
       decoration: InputDecoration(labelText: label),
-      validator: (v) => v == null ? 'Pilih $label' : null,
-      onChanged: onChanged,
+      validator: (v) => values.any((item) => item.$1 == v)
+          ? null
+          : 'Pilih $label yang tersedia',
+      onChanged: _submit.state.busy || widget.catalogLoading ? null : onChanged,
     ),
   );
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.all(22),
-    child: Form(
-      key: _form,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          toolIntro(
-            widget.activity == null
-                ? 'Buat aktivitas belajar'
-                : 'Detail aktivitas',
-            'Bagikan instruksi dan materi dalam bentuk teks. Siswa dapat mengirim jawaban langsung di NALARA.',
-          ),
-          toolCard(
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _choice(
-                  'Siswa',
-                  _student,
-                  widget.catalog.students.map((s) => (s.id, s.name)).toList(),
-                  widget.activity == null
-                      ? (v) => setState(() => _student = v)
-                      : null,
+  Widget build(BuildContext context) => BlocBuilder<SubmitCubit, SubmitState>(
+    bloc: _submit,
+    builder: (context, submit) => AbsorbPointer(
+      absorbing: submit.busy,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(22),
+        child: Form(
+          key: _form,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              toolIntro(
+                widget.activity == null
+                    ? 'Buat aktivitas belajar'
+                    : 'Detail aktivitas',
+                widget.activity == null
+                    ? 'Pilih satu atau beberapa siswa, atau isi penerima dari grup. Jawaban tugas tetap terpisah untuk setiap siswa.'
+                    : 'Perbarui aktivitas siswa ini. Penerima, bidang belajar, dan jenis tetap seperti saat dibuat.',
+              ),
+              if (widget.catalogLoading)
+                const LinearProgressIndicator(
+                  minHeight: 2,
+                  color: NalaraColors.green,
                 ),
-                _choice(
-                  'Bidang belajar',
-                  _subject,
-                  widget.catalog.subjects.map((s) => (s.id, s.name)).toList(),
-                  widget.activity == null
-                      ? (v) => setState(() => _subject = v)
-                      : null,
-                ),
-                _choice(
-                  'Jenis',
-                  _kind,
-                  const [('task', 'Tugas'), ('material', 'Materi')],
-                  widget.activity == null
-                      ? (v) => setState(() => _kind = v!)
-                      : null,
-                ),
-                TextFormField(
-                  controller: _title,
-                  maxLength: 200,
-                  decoration: const InputDecoration(
-                    labelText: 'Judul aktivitas',
+              if (widget.catalogError != null) ...[
+                Text(
+                  'Pilihan belum dapat diperbarui. Isian tetap disimpan. ${widget.catalogError}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: NalaraColors.muted,
                   ),
-                  validator: (v) => (v?.trim().length ?? 0) < 2
-                      ? 'Isi judul aktivitas'
-                      : null,
                 ),
-                const SizedBox(height: 18),
-                TextFormField(
-                  controller: _content,
-                  minLines: 5,
-                  maxLines: 12,
-                  maxLength: 10000,
-                  decoration: const InputDecoration(
-                    labelText: 'Instruksi / materi',
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: widget.reload,
+                    child: const Text('Coba muat pilihan lagi'),
                   ),
-                  validator: (v) => (v?.trim().length ?? 0) < 2
-                      ? 'Isi instruksi atau materi'
-                      : null,
-                ),
-                const SizedBox(height: 18),
-                if (_kind == 'task') ...[
-                  DateTimeField(
-                    label: _due == null
-                        ? 'Pilih batas pengumpulan (opsional)'
-                        : 'Batas pengumpulan',
-                    value: _due ?? DateTime.now().add(const Duration(days: 7)),
-                    onChanged: (v) => setState(() => _due = v),
-                  ),
-                  if (_due != null)
-                    TextButton(
-                      onPressed: () => setState(() => _due = null),
-                      child: const Text('Hapus batas waktu'),
-                    ),
-                  const SizedBox(height: 18),
-                ],
-                _choice('Status', _status, const [
-                  ('draft', 'Simpan draft'),
-                  ('published', 'Bagikan sekarang'),
-                  ('archived', 'Arsipkan'),
-                ], (v) => setState(() => _status = v!)),
-                _choice('Akses', _visibility, const [
-                  ('student', 'Guru & siswa'),
-                  ('shared', 'Guru, siswa & orang tua'),
-                ], (v) => setState(() => _visibility = v!)),
-                SubmitButton(
-                  cubit: _submit,
-                  label: 'Simpan aktivitas',
-                  onPressed: () async {
-                    if (!_form.currentState!.validate() ||
-                        _student == null ||
-                        _subject == null) {
-                      return;
-                    }
-                    final ok = await _submit.run(
-                      () => getIt<TutorToolsRepository>().saveActivity(
-                        ActivityDraft(
-                          studentId: _student!,
-                          subjectId: _subject!,
-                          kind: _kind,
-                          title: _title.text.trim(),
-                          content: _content.text.trim(),
-                          status: _status,
-                          visibility: _visibility,
-                          dueAt: _due,
-                        ),
-                        id: widget.activity?.id,
-                      ),
-                    );
-                    if (ok && context.mounted) {
-                      successMessage(context, 'Aktivitas berhasil disimpan.');
-                      finishForm(context, '/teacher/materials');
-                    }
-                  },
                 ),
               ],
-            ),
+              toolCard(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ActivityRecipientsFields(
+                      cubit: _recipients,
+                      options: widget.catalog,
+                      enabled: !submit.busy && !widget.catalogLoading,
+                      manageGroups: widget.manageGroups,
+                      lockedStudentName: widget.activity?.studentName,
+                    ),
+                    _choice(
+                      'Bidang belajar',
+                      _subject,
+                      widget.catalog.subjects
+                          .map((s) => (s.id, s.name))
+                          .toList(),
+                      widget.activity == null
+                          ? (v) => setState(() => _subject = v)
+                          : null,
+                    ),
+                    _choice(
+                      'Jenis',
+                      _kind,
+                      const [('task', 'Tugas'), ('material', 'Materi')],
+                      widget.activity == null
+                          ? (v) => setState(() => _kind = v!)
+                          : null,
+                    ),
+                    TextFormField(
+                      controller: _title,
+                      maxLength: 200,
+                      decoration: const InputDecoration(
+                        labelText: 'Judul aktivitas',
+                      ),
+                      validator: (v) => (v?.trim().length ?? 0) < 2
+                          ? 'Isi judul aktivitas'
+                          : null,
+                    ),
+                    const SizedBox(height: 18),
+                    TextFormField(
+                      controller: _content,
+                      minLines: 5,
+                      maxLines: 12,
+                      maxLength: 10000,
+                      decoration: const InputDecoration(
+                        labelText: 'Instruksi / materi',
+                      ),
+                      validator: (v) => (v?.trim().length ?? 0) < 2
+                          ? 'Isi instruksi atau materi'
+                          : null,
+                    ),
+                    const SizedBox(height: 18),
+                    if (_kind == 'task') ...[
+                      DateTimeField(
+                        label: _due == null
+                            ? 'Pilih batas pengumpulan (opsional)'
+                            : 'Batas pengumpulan',
+                        value:
+                            _due ?? DateTime.now().add(const Duration(days: 7)),
+                        onChanged: (v) => setState(() => _due = v),
+                      ),
+                      if (_due != null)
+                        TextButton(
+                          onPressed: () => setState(() => _due = null),
+                          child: const Text('Hapus batas waktu'),
+                        ),
+                      const SizedBox(height: 18),
+                    ],
+                    _choice('Status', _status, const [
+                      ('draft', 'Simpan draft'),
+                      ('published', 'Bagikan sekarang'),
+                      ('archived', 'Arsipkan'),
+                    ], (v) => setState(() => _status = v!)),
+                    _choice('Akses', _visibility, const [
+                      ('student', 'Guru & siswa'),
+                      ('shared', 'Guru, siswa & orang tua'),
+                    ], (v) => setState(() => _visibility = v!)),
+                    SubmitButton(
+                      cubit: _submit,
+                      label: 'Simpan aktivitas',
+                      enabled: !widget.catalogLoading,
+                      onPressed: () async {
+                        if (widget.catalogLoading ||
+                            !_form.currentState!.validate() ||
+                            _subject == null) {
+                          return;
+                        }
+                        final ok = await _submit.run(
+                          () => getIt<TutorToolsRepository>().saveActivity(
+                            ActivityDraft(
+                              studentIds: _recipients.state.studentIds,
+                              subjectId: _subject!,
+                              kind: _kind,
+                              title: _title.text.trim(),
+                              content: _content.text.trim(),
+                              status: _status,
+                              visibility: _visibility,
+                              dueAt: _due,
+                            ),
+                            id: widget.activity?.id,
+                          ),
+                        );
+                        if (ok && context.mounted) {
+                          successMessage(
+                            context,
+                            'Aktivitas berhasil disimpan.',
+                          );
+                          finishForm(context, '/teacher/materials');
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     ),
   );
@@ -1105,6 +1225,8 @@ class _PreferencesEditorState extends State<_PreferencesEditor> {
     widget.preferences.progress,
     widget.preferences.reports,
     widget.preferences.assignments,
+    widget.preferences.tuitionTeacherReminders,
+    widget.preferences.tuitionParentReminders,
   ];
   final _submit = SubmitCubit();
   @override
@@ -1120,10 +1242,10 @@ class _PreferencesEditorState extends State<_PreferencesEditor> {
   Widget build(BuildContext context) => PageBody(
     children: [
       toolIntro(
-        widget.branding ? 'Identitas laporan' : 'Notifikasi yang Anda terima',
+        widget.branding ? 'Identitas laporan' : 'Atur pengingat Anda',
         widget.branding
             ? 'Sesuaikan logo, nama, warna, dan catatan penutup laporan PDF Anda.'
-            : 'Pilih notifikasi push yang diterima akun Guru. Pesan tetap tercatat di kotak notifikasi dan tidak mengubah pengiriman kepada siswa atau orang tua.',
+            : 'Pilih notifikasi untuk Anda dan pengingat biaya untuk Orang Tua. Dua pengingat biaya dapat diatur secara terpisah.',
       ),
       toolCard(
         Column(
@@ -1169,57 +1291,69 @@ class _PreferencesEditorState extends State<_PreferencesEditor> {
                 onChanged: (v) => setState(() => _color = v!),
               ),
             ] else ...[
-              for (var i = 0; i < _values.length; i++)
-                Column(
+              BlocBuilder<SubmitCubit, SubmitState>(
+                bloc: _submit,
+                builder: (context, submit) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (i > 0) const Divider(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  const [
-                                    'Pengingat jadwal & target',
-                                    'Perubahan progress',
-                                    'Laporan belajar',
-                                    'Tugas & materi',
-                                  ][i],
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  const [
-                                    'Pemberitahuan satu hari sebelumnya.',
-                                    'Saat perkembangan belajar diperbarui.',
-                                    'Pembaruan terkait laporan sesi.',
-                                    'Pembaruan aktivitas belajar siswa.',
-                                  ][i],
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    height: 1.5,
-                                    color: NalaraColors.muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Switch(
-                            value: _values[i],
-                            onChanged: (v) => setState(() => _values[i] = v),
-                          ),
-                        ],
+                    const Text(
+                      'Notifikasi untuk Anda',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Pengaturan berikut hanya mengatur push Guru. Pesan tetap tersedia di kotak notifikasi.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: NalaraColors.muted,
                       ),
                     ),
+                    for (var i = 0; i < _values.length; i++) ...[
+                      if (i == 4) ...[
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Pengingat biaya bimbel',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Hanya selama belum lunas. Membuka notifikasi tidak menandai pembayaran; perbarui status setelah pembayaran diterima.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.5,
+                            color: NalaraColors.muted,
+                          ),
+                        ),
+                      ] else if (i > 0)
+                        const Divider(height: 1),
+                      NotificationPreferenceTile(
+                        key: ValueKey('notification-preference-$i'),
+                        title: const [
+                          'Pengingat jadwal & target',
+                          'Perubahan progress',
+                          'Laporan belajar',
+                          'Tugas & materi',
+                          'Pengingat biaya untuk saya',
+                          'Pengingat biaya ke Orang Tua',
+                        ][i],
+                        description: const [
+                          'Pemberitahuan satu hari sebelumnya.',
+                          'Saat perkembangan belajar diperbarui.',
+                          'Pembaruan terkait laporan sesi.',
+                          'Pembaruan aktivitas belajar siswa.',
+                          'Mulai hari jatuh tempo, maksimal sekali sehari per siswa. Ketuk pengingat untuk membuka tab Biaya bimbel.',
+                          'H-1 dan hari jatuh tempo saja, hanya kepada Orang Tua yang terhubung. Tidak dikirim ke Siswa.',
+                        ][i],
+                        value: _values[i],
+                        onChanged: submit.busy
+                            ? null
+                            : (v) => setState(() => _values[i] = v),
+                      ),
+                    ],
                   ],
                 ),
+              ),
             ],
             const SizedBox(height: 24),
             SubmitButton(
@@ -1235,6 +1369,8 @@ class _PreferencesEditorState extends State<_PreferencesEditor> {
                   progress: _values[1],
                   reports: _values[2],
                   assignments: _values[3],
+                  tuitionTeacherReminders: _values[4],
+                  tuitionParentReminders: _values[5],
                 );
                 final ok = await _submit.run(
                   () => widget.branding

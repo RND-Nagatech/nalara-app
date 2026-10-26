@@ -8,7 +8,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../firebase_options.dart';
 import '../../utils/constants.dart';
+import '../../utils/firebase_web_config.dart';
 import '../network/api_client.dart';
+import 'web_notification.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -42,13 +44,17 @@ class PushNotificationService {
   String? _token;
   NotificationTap? _pendingTap;
   bool _initialized = false;
+  bool _permissionGranted = false;
+  int _activationGeneration = 0;
 
   PushNotificationService({
     required this.teacherApi,
     required this.portalApi,
     FirebaseMessaging? messaging,
     FlutterLocalNotificationsPlugin? localNotifications,
-  }) : messaging = messaging ?? (kIsWeb ? null : FirebaseMessaging.instance),
+  }) : messaging =
+           messaging ??
+           (Firebase.apps.isEmpty ? null : FirebaseMessaging.instance),
        localNotifications =
            localNotifications ?? FlutterLocalNotificationsPlugin();
 
@@ -56,39 +62,45 @@ class PushNotificationService {
 
   Future<void> initialize() async {
     if (_initialized) return;
-    if (kIsWeb) {
+    final messaging = this.messaging;
+    if (messaging == null) {
       _initialized = true;
       return;
     }
-    final messaging = this.messaging!;
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const ios = DarwinInitializationSettings();
-    await localNotifications.initialize(
-      const InitializationSettings(android: android, iOS: ios),
-      onDidReceiveNotificationResponse: (response) {
-        final payload = response.payload;
-        if (payload != null) _publish(_decode(payload));
-      },
-    );
-    final androidPlugin = localNotifications
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
-    await androidPlugin?.createNotificationChannel(
-      const AndroidNotificationChannel(
-        'nalara_notifications',
-        'Notifikasi Nalara',
-        description: 'Pengingat dan informasi aktivitas belajar.',
-        importance: Importance.high,
-      ),
-    );
-    await messaging.setForegroundNotificationPresentationOptions(
-      alert: false,
-      badge: false,
-      sound: false,
-    );
-    await messaging.requestPermission(alert: true, badge: true, sound: true);
+    if (!kIsWeb) {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      // Permission is requested only by the custom, user-initiated prompt.
+      const ios = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
+      await localNotifications.initialize(
+        const InitializationSettings(android: android, iOS: ios),
+        onDidReceiveNotificationResponse: (response) {
+          final payload = response.payload;
+          if (payload != null) _publish(_decode(payload));
+        },
+      );
+      final androidPlugin = localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'nalara_notifications',
+          'Notifikasi Nalara',
+          description: 'Pengingat dan informasi aktivitas belajar.',
+          importance: Importance.high,
+        ),
+      );
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: false,
+        badge: false,
+        sound: false,
+      );
+    }
     _foregroundSubscription = FirebaseMessaging.onMessage.listen(
       _showForeground,
     );
@@ -97,11 +109,13 @@ class PushNotificationService {
     );
     final initialMessage = await messaging.getInitialMessage();
     if (initialMessage != null) _publishMessage(initialMessage);
-    final launchDetails = await localNotifications
-        .getNotificationAppLaunchDetails();
-    if (launchDetails?.didNotificationLaunchApp == true) {
-      final payload = launchDetails?.notificationResponse?.payload;
-      if (payload != null) _publish(_decode(payload));
+    if (!kIsWeb) {
+      final launchDetails = await localNotifications
+          .getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp == true) {
+        final payload = launchDetails?.notificationResponse?.payload;
+        if (payload != null) _publish(_decode(payload));
+      }
     }
     _tokenSubscription = messaging.onTokenRefresh.listen((token) {
       _token = token;
@@ -118,20 +132,76 @@ class PushNotificationService {
 
   Future<void> activatePortal() => activateParent();
 
+  Future<AuthorizationStatus?> authorizationStatus() async =>
+      (await messaging?.getNotificationSettings())?.authorizationStatus;
+
+  /// Start this directly from the user's button event (also required on web).
+  /// Do not await storage, initialization or navigation before the SDK call.
+  Future<AuthorizationStatus?> requestUserPermission() async {
+    final settings = await messaging?.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    final status = settings?.authorizationStatus;
+    _permissionGranted = _allowed(status);
+    return status;
+  }
+
+  Future<void> refreshPermissionRegistration() async {
+    final accountType = _accountType;
+    if (accountType != null) await _activate(accountType);
+  }
+
+  bool _allowed(AuthorizationStatus? status) =>
+      status == AuthorizationStatus.authorized ||
+      status == AuthorizationStatus.provisional;
+
   Future<void> _activate(_PushAccountType accountType) async {
+    final generation = ++_activationGeneration;
+    final api = accountType == _PushAccountType.teacher
+        ? teacherApi
+        : portalApi;
+    final sessionGeneration = api.tokens.sessionGeneration;
     await initialize();
+    if (generation != _activationGeneration) return;
     final messaging = this.messaging;
     if (messaging == null) return;
     _accountType = accountType;
-    _token ??= await messaging.getToken();
-    if (_token != null) await _register(_token!);
+    try {
+      // Silent reads/registration must never cause an OS permission prompt.
+      final status = await authorizationStatus();
+      if (generation != _activationGeneration) return;
+      _permissionGranted = _allowed(status);
+      if (!_permissionGranted) return;
+      if (kIsWeb) {
+        _token ??= await messaging.getToken(
+          vapidKey: const FirebaseWebConfig().vapidKey,
+          serviceWorkerScriptPath: '/firebase-messaging-sw.js',
+        );
+      } else {
+        _token ??= await messaging.getToken();
+      }
+    } catch (error) {
+      debugPrint('Firebase Messaging tidak tersedia (${error.runtimeType}).');
+      return;
+    }
+    if (generation != _activationGeneration ||
+        api.tokens.sessionGeneration != sessionGeneration) {
+      return;
+    }
+    if (_token != null) {
+      await _register(_token!, expectedSessionGeneration: sessionGeneration);
+    }
     await _flushPendingReads();
   }
 
   Future<void> deactivate() async {
+    _activationGeneration++;
     final token = _token;
     final accountType = _accountType;
     _accountType = null;
+    _permissionGranted = false;
     if (token == null || accountType == null) return;
     try {
       final api = accountType == _PushAccountType.teacher
@@ -143,7 +213,11 @@ class PushNotificationService {
         _PushAccountType.student =>
           ApiConstants.studentPortalNotificationDevices,
       };
-      await api.delete(path, data: {'token': token, 'platform': _platform});
+      await api.delete(
+        path,
+        data: {'token': token, 'platform': _platform},
+        expectedSessionGeneration: api.tokens.sessionGeneration,
+      );
     } catch (_) {
       // Session logout must not be blocked by an unavailable push endpoint.
     }
@@ -152,7 +226,9 @@ class PushNotificationService {
   /// The backend has already revoked the deleted account's device bindings.
   /// Do not call authenticated endpoints using its now-revoked credentials.
   Future<void> forgetDeletedAccount() async {
+    _activationGeneration++;
     _accountType = null;
+    _permissionGranted = false;
     _pendingTap = null;
     _pendingReadIds.clear();
     await localNotifications.cancelAll();
@@ -198,9 +274,9 @@ class PushNotificationService {
     return defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
   }
 
-  Future<void> _register(String token) async {
+  Future<void> _register(String token, {int? expectedSessionGeneration}) async {
     final accountType = _accountType;
-    if (accountType == null) return;
+    if (accountType == null || !_permissionGranted) return;
     try {
       final api = accountType == _PushAccountType.teacher
           ? teacherApi
@@ -211,7 +287,13 @@ class PushNotificationService {
         _PushAccountType.student =>
           ApiConstants.studentPortalNotificationDevices,
       };
-      await api.post(path, {'token': token, 'platform': _platform});
+      await api.request(
+        'POST',
+        path,
+        data: {'token': token, 'platform': _platform},
+        expectedSessionGeneration:
+            expectedSessionGeneration ?? api.tokens.sessionGeneration,
+      );
     } catch (_) {
       // The next token refresh or authenticated app start retries registration.
     }
@@ -225,13 +307,21 @@ class PushNotificationService {
   }
 
   Future<void> _showForeground(RemoteMessage message) async {
-    if (_accountType == null) return;
+    if (_accountType == null || !_permissionGranted) return;
     final notification = message.notification;
     if (notification == null) return;
     final payload = <String, dynamic>{
       'notificationId': message.data['notificationId']?.toString() ?? '',
       'route': message.data['route']?.toString() ?? '',
     };
+    if (kIsWeb) {
+      await showWebNotification(
+        title: notification.title ?? 'NALARA',
+        body: notification.body,
+        route: payload['route'] as String?,
+      );
+      return;
+    }
     await localNotifications.show(
       message.messageId?.hashCode.abs() ??
           DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -288,6 +378,9 @@ class PushNotificationService {
       route.startsWith('/student/');
 
   Future<void> dispose() async {
+    _activationGeneration++;
+    _accountType = null;
+    _permissionGranted = false;
     await _foregroundSubscription?.cancel();
     await _openedSubscription?.cancel();
     await _tokenSubscription?.cancel();

@@ -8,12 +8,17 @@ class ReferralInvitationModel {
     id: json['_id'] as String,
     token: json['token'] as String?,
     audience: json['audience'] == 'parent' ? AppRole.parent : AppRole.student,
-    expiresAt: DateTime.parse(json['expiresAt'] as String),
+    expiresAt: json['expiresAt'] == null
+        ? null
+        : DateTime.parse(json['expiresAt'] as String),
     revokedAt: json['revokedAt'] == null
         ? null
         : DateTime.parse(json['revokedAt'] as String),
     redeemedAt: json['redeemedAt'] == null
         ? null
         : DateTime.parse(json['redeemedAt'] as String),
+    lastUsedAt: (json['lastUsedAt'] ?? json['redeemedAt']) == null
+        ? null
+        : DateTime.parse((json['lastUsedAt'] ?? json['redeemedAt']) as String),
   );
 }

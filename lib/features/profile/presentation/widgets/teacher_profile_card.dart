@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../../auth/domain/entities/teacher.dart';
+import '../../../../shared/widgets/nalara_avatar.dart';
 import 'profile_style.dart';
 
 class TeacherProfileCard extends StatelessWidget {
   final Teacher teacher;
+  final VoidCallback? onEditAvatar;
 
-  const TeacherProfileCard({super.key, required this.teacher});
-
-  String get _initials {
-    final words = teacher.name.trim().split(RegExp(r'\s+'));
-    if (words.first.isEmpty) return '';
-    return '${words.first.characters.first}${words.length > 1 ? words.last.characters.first : ''}'
-        .toUpperCase();
-  }
+  const TeacherProfileCard({
+    super.key,
+    required this.teacher,
+    this.onEditAvatar,
+  });
 
   @override
   Widget build(BuildContext context) => Container(
@@ -69,7 +68,7 @@ class TeacherProfileCard extends StatelessWidget {
                       minWidth: 84,
                       minHeight: 84,
                     ),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: ProfileStyle.green,
                       shape: BoxShape.circle,
@@ -82,26 +81,41 @@ class TeacherProfileCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: _initials.isEmpty
-                        ? const Icon(
-                            Icons.person_outline_rounded,
-                            size: 32,
-                            color: Colors.white,
-                          )
-                        : Text(
-                            _initials,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontFamily: 'NalaraLora',
-                              fontSize: 28,
-                              height: 1.5,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
+                    child: NalaraAvatar(
+                      name: teacher.name,
+                      avatarId: teacher.avatarId,
+                      size: 84,
+                      backgroundColor: ProfileStyle.green,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
               ),
+              if (teacher.missingAvatar) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Foto profil belum diisi',
+                  key: const ValueKey('profile-avatar-missing'),
+                  textAlign: TextAlign.center,
+                  style: ProfileStyle.body.copyWith(
+                    fontSize: 12,
+                    color: ProfileStyle.danger,
+                  ),
+                ),
+              ],
+              if (onEditAvatar != null)
+                Center(
+                  child: TextButton.icon(
+                    key: const ValueKey('profile-edit-avatar'),
+                    onPressed: onEditAvatar,
+                    icon: const Icon(Icons.edit_outlined, size: 17),
+                    label: Text(
+                      teacher.missingAvatar
+                          ? 'Pilih foto profil'
+                          : 'Edit foto profil',
+                    ),
+                  ),
+                ),
               const SizedBox(height: 18),
               Text(
                 teacher.name.trim().isEmpty

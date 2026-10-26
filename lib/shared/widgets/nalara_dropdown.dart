@@ -6,11 +6,15 @@ class NalaraDropdownOption<T extends Object> {
   final T value;
   final String label;
   final String searchText;
+  final String subtitle;
+  final Widget? leading;
   final bool enabled;
   const NalaraDropdownOption({
     required this.value,
     required this.label,
     this.searchText = '',
+    this.subtitle = '',
+    this.leading,
     this.enabled = true,
   });
 }
@@ -28,6 +32,10 @@ class NalaraDropdown<T extends Object> extends FormField<T> {
   final String hint, searchHint;
   final String? menuTitle;
 
+  /// Optional selected content; selection, focus and validation stay shared.
+  final Widget Function(BuildContext, NalaraDropdownOption<T>?)?
+  selectedBuilder;
+
   NalaraDropdown({
     super.key,
     required this.options,
@@ -37,6 +45,7 @@ class NalaraDropdown<T extends Object> extends FormField<T> {
     this.hint = 'Pilih opsi',
     this.searchHint = 'Cari pilihan...',
     this.menuTitle,
+    this.selectedBuilder,
     bool enabled = true,
     super.validator,
     super.onSaved,
@@ -161,19 +170,21 @@ class _NalaraDropdownState<T extends Object> extends FormFieldState<T> {
                         : colors.onSurfaceVariant,
                   ),
                 ),
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: 'NalaraInter',
-                fontSize: 14,
-                height: 1.4,
-                color: widget.enabled && value != null
-                    ? colors.onSurface
-                    : colors.onSurfaceVariant,
-              ),
-            ),
+            child:
+                widget.selectedBuilder?.call(context, selected) ??
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'NalaraInter',
+                    fontSize: 14,
+                    height: 1.4,
+                    color: widget.enabled && value != null
+                        ? colors.onSurface
+                        : colors.onSurfaceVariant,
+                  ),
+                ),
           ),
         ),
       ),
@@ -216,13 +227,16 @@ class _DropdownPanelState<T extends Object> extends State<_DropdownPanel<T>> {
     final words = _query.split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
     final matches = widget.options
         .where((option) {
-          final text = '${option.label} ${option.searchText}'.toLowerCase();
+          final text = '${option.label} ${option.searchText} ${option.subtitle}'
+              .toLowerCase();
           return words.every(text.contains);
         })
         .toList(growable: false);
+    final hasSubtitles = matches.any((option) => option.subtitle.isNotEmpty);
     final rowHeight = math.max(
-      52.0,
-      MediaQuery.textScalerOf(context).scale(14) * 2.8 + 12,
+      hasSubtitles ? 72.0 : 52.0,
+      MediaQuery.textScalerOf(context).scale(14) * (hasSubtitles ? 4 : 2.8) +
+          12,
     );
     return Dialog(
       key: const ValueKey('nalara-dropdown-panel'),
@@ -365,22 +379,55 @@ class _DropdownPanelState<T extends Object> extends State<_DropdownPanel<T>> {
                                         ),
                                         child: Row(
                                           children: [
+                                            if (option.leading != null) ...[
+                                              option.leading!,
+                                              const SizedBox(width: 12),
+                                            ],
                                             Expanded(
-                                              child: Text(
-                                                option.label,
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontFamily: 'NalaraInter',
-                                                  fontSize: 14,
-                                                  height: 1.4,
-                                                  fontWeight: selected
-                                                      ? FontWeight.w600
-                                                      : FontWeight.w400,
-                                                  color: option.enabled
-                                                      ? colors.onSurface
-                                                      : colors.onSurfaceVariant,
-                                                ),
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    option.label,
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      fontFamily: 'NalaraInter',
+                                                      fontSize: 14,
+                                                      height: 1.4,
+                                                      fontWeight: selected
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w400,
+                                                      color: option.enabled
+                                                          ? colors.onSurface
+                                                          : colors
+                                                                .onSurfaceVariant,
+                                                    ),
+                                                  ),
+                                                  if (option
+                                                      .subtitle
+                                                      .isNotEmpty) ...[
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      option.subtitle,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontFamily:
+                                                            'NalaraInter',
+                                                        fontSize: 12,
+                                                        height: 1.4,
+                                                        color: colors
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
                                               ),
                                             ),
                                             if (selected) ...[
@@ -668,12 +715,10 @@ class _MultiDropdownPanelState<T extends Object>
                       ),
                     ),
                   ),
-                  TextButton(
-                    key: const ValueKey('nalara-multi-dropdown-done'),
-                    onPressed: () => Navigator.of(
-                      context,
-                    ).pop(Set<T>.unmodifiable(_selected)),
-                    child: const Text('Selesai'),
+                  IconButton(
+                    tooltip: 'Tutup pilihan',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
                   ),
                 ],
               ),
@@ -824,6 +869,24 @@ class _MultiDropdownPanelState<T extends Object>
                           ),
                         ),
                       ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  key: const ValueKey('nalara-multi-dropdown-done'),
+                  onPressed: () =>
+                      Navigator.of(context).pop(Set<T>.unmodifiable(_selected)),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Selesai'),
+                ),
               ),
             ],
           ),

@@ -67,7 +67,9 @@ class ScheduleFormHeader extends StatelessWidget {
           if (!stacked)
             Positioned(
               right: -20,
-              top: 20,
+              // Align the artwork's top edge with the intro copy instead of
+              // letting it sit noticeably lower than the title.
+              top: 8,
               width: math.min(270, constraints.maxWidth * .58),
               child: IgnorePointer(child: artwork),
             ),
@@ -97,7 +99,7 @@ class ScheduleFormHeader extends StatelessWidget {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Atur jadwal les untuk siswa dengan bidang belajar yang dipilih.',
+                        'Atur satu jadwal untuk satu atau beberapa siswa dalam bidang belajar yang sama.',
                         style: TextStyle(
                           fontFamily: 'NalaraInter',
                           fontSize: 13.5,

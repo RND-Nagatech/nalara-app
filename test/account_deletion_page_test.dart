@@ -30,6 +30,8 @@ class _Auth implements AuthRepository {
   @override
   Future<bool> onboardingSeen() async => true;
   @override
+  Future<void> completeOnboarding() async {}
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -97,8 +99,20 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, String key) async {
-    await tester.ensureVisible(find.byKey(ValueKey(key)));
-    await tester.pumpAndSettle();
+    final target = find.byKey(ValueKey(key));
+    final scroll = find.byKey(
+      const PageStorageKey('delete-account-scroll'),
+    );
+    for (var attempt = 0; attempt < 12; attempt++) {
+      if (target.evaluate().isNotEmpty) {
+        await tester.ensureVisible(target);
+        await tester.pumpAndSettle();
+        return;
+      }
+      await tester.drag(scroll, const Offset(0, -420));
+      await tester.pumpAndSettle();
+    }
+    fail('Tidak menemukan $key setelah menggulir halaman penghapusan akun.');
   }
 
   Future<void> consent(WidgetTester tester) async {

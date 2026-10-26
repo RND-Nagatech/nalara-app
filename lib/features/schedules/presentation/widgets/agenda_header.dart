@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/domain/app_timezones.dart';
 import 'agenda_style.dart';
 
 class AgendaHeader extends StatelessWidget {
@@ -8,7 +9,7 @@ class AgendaHeader extends StatelessWidget {
   final bool readOnly;
   final VoidCallback? onBack;
   final List<Widget> actions;
-  final String? subtitle;
+  final String? subtitle, timezone;
   const AgendaHeader({
     super.key,
     required this.loading,
@@ -18,6 +19,7 @@ class AgendaHeader extends StatelessWidget {
     this.onBack,
     this.actions = const [],
     this.subtitle,
+    this.timezone,
   });
   @override
   Widget build(BuildContext context) => attendance
@@ -65,6 +67,7 @@ class AgendaHeader extends StatelessWidget {
                         : 'Pantau kehadiran siswa di setiap sesi belajar.'),
                 style: AgendaStyle.body,
               ),
+              if (timezone != null) _zone(),
             ],
           ),
         )
@@ -85,6 +88,7 @@ class AgendaHeader extends StatelessWidget {
                               : 'Atur dan kelola sesi les Anda'),
                       style: AgendaStyle.body,
                     ),
+                    if (timezone != null) _zone(),
                   ],
                 ),
               ),
@@ -94,6 +98,14 @@ class AgendaHeader extends StatelessWidget {
             ],
           ),
         );
+
+  Widget _zone() => Padding(
+    padding: const EdgeInsets.only(top: 3),
+    child: Text(
+      'Waktu ${AppTimezones.abbreviation(timezone!)}',
+      style: AgendaStyle.body.copyWith(fontSize: 11),
+    ),
+  );
 
   Widget _refresh() => IconButton(
     key: ValueKey(attendance ? 'attendance-refresh' : 'agenda-refresh'),

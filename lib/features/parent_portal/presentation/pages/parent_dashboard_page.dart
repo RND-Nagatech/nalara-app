@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../../shared/widgets/nalara_dropdown.dart';
 import '../../../../shared/widgets/nalara_header.dart';
 import '../../../../shared/widgets/page_widgets.dart';
 import '../../../../utils/date_time_utils.dart';
 import '../../../../utils/injector.dart';
 import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../../../dashboard/presentation/widgets/home_empty_schedule.dart';
+import '../../../dashboard/presentation/widgets/home_dashboard_view.dart';
 import '../../../dashboard/presentation/widgets/home_lesson_card.dart';
 import '../../../dashboard/presentation/widgets/home_role_widgets.dart';
 import '../../../dashboard/presentation/widgets/home_style.dart';
@@ -16,9 +16,11 @@ import '../../../learning_goals/presentation/widgets/target_card.dart';
 import '../../../learning_goals/presentation/widgets/learning_plans_empty_state.dart';
 import '../../../lesson_reports/presentation/widgets/report_list_card.dart';
 import '../../../lesson_reports/presentation/widgets/reports_empty_state.dart';
+import '../../../schedules/presentation/widgets/lesson_clock.dart';
 import '../../domain/entities/parent_portal.dart';
 import '../../domain/repositories/parent_portal_repository.dart';
 import '../bloc/parent_dashboard_cubit.dart';
+import '../widgets/parent_child_switcher.dart';
 
 class ParentDashboardPage extends StatefulWidget {
   const ParentDashboardPage({super.key});
@@ -87,170 +89,181 @@ class _ParentDashboardPageState extends State<ParentDashboardPage>
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: HomeStyle.cream,
-    body: SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: BlocBuilder<ParentDashboardCubit, ParentDashboardState>(
-            bloc: _cubit,
-            builder: (context, state) {
-              final data = state.data;
-              final header = HomeRoleHeader(
-                name:
-                    data?.parentName ??
-                    getIt<AuthCubit>().state.accessProfile?.name ??
-                    '',
-                date: data == null
-                    ? 'Beranda Orang Tua'
-                    : DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(
-                        DateTimeUtils.local(data.generatedAt, data.timezone),
-                      ),
-                unreadNotifications: data?.unreadNotifications ?? 0,
-                onProfile: () => _open('/parent/profile'),
-                onNotifications: () => _open('/parent/notifications'),
-                profileTooltip: 'Profil orang tua',
-              );
-              return NalaraPageLayout(
-                header: header,
-                bottomSpacing: 0,
-                body: data == null
-                    ? Column(
-                        children: [
-                          if (state.children.length > 1) _switcher(state),
-                          Expanded(
-                            child: state.error == null
-                                ? const Center(
-                                    child: CircularProgressIndicator(),
-                                  )
-                                : ErrorNotice(
-                                    state.error!,
-                                    retry: _cubit.refresh,
-                                  ),
-                          ),
-                        ],
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _cubit.refresh,
-                        child: CustomScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          slivers: [
-                            SliverToBoxAdapter(child: _hero(data)),
-                            if (state.loading)
-                              const SliverToBoxAdapter(
-                                child: LinearProgressIndicator(),
-                              ),
-                            if (state.error != null)
-                              SliverToBoxAdapter(
-                                child: ErrorNotice(
-                                  state.error!,
-                                  retry: _cubit.refresh,
-                                  compact: true,
-                                ),
-                              ),
-                            if (state.children.length > 1)
-                              SliverToBoxAdapter(child: _switcher(state)),
-                            _section(
-                              'Jadwal les anak hari ini',
-                              () => context.go(_schedule(data)),
-                            ),
-                            SliverPadding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                              ),
-                              sliver: data.todaySessions.isEmpty
-                                  ? SliverToBoxAdapter(
-                                      child: HomeEmptySchedule(
-                                        onCreate: () {},
-                                        showAction: false,
-                                        description:
-                                            'Jadwal les anak Anda akan muncul di sini.',
-                                      ),
+    body: LessonClockScope(
+      child: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: BlocBuilder<ParentDashboardCubit, ParentDashboardState>(
+              bloc: _cubit,
+              builder: (context, state) {
+                final data = state.data;
+                final header = HomeRoleHeader(
+                  name:
+                      data?.parentName ??
+                      getIt<AuthCubit>().state.accessProfile?.name ??
+                      '',
+                  date: data == null
+                      ? 'Beranda Orang Tua'
+                      : DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(
+                          DateTimeUtils.local(data.generatedAt, data.timezone),
+                        ),
+                  unreadNotifications: data?.unreadNotifications ?? 0,
+                  onProfile: () => _open('/parent/profile'),
+                  onNotifications: () => _open('/parent/notifications'),
+                  profileTooltip: 'Profil orang tua',
+                );
+                return NalaraPageLayout(
+                  header: header,
+                  bottomSpacing: 0,
+                  body: data == null
+                      ? Column(
+                          children: [
+                            if (state.children.length > 1) _switcher(state),
+                            Expanded(
+                              child: state.error == null
+                                  ? const Center(
+                                      child: CircularProgressIndicator(),
                                     )
-                                  : SliverList.builder(
-                                      itemCount: data.todaySessions.length,
-                                      itemBuilder: (context, index) =>
-                                          HomeLessonCard(
-                                            lesson: data.todaySessions[index],
-                                            timezone: data.timezone,
-                                            accent: HomeStyle.green,
-                                            onTap: () => _open(
-                                              '/parent/sessions/${data.todaySessions[index].id}',
-                                            ),
-                                          ),
+                                  : ErrorNotice(
+                                      state.error!,
+                                      retry: _cubit.refresh,
                                     ),
-                            ),
-                            _section(
-                              'Laporan terbaru',
-                              () => _open('/parent/reports'),
-                            ),
-                            SliverPadding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                              ),
-                              sliver: data.latestReports.isEmpty
-                                  ? SliverToBoxAdapter(
-                                      child: ReportsEmptyState(
-                                        status: 'published',
-                                        onAdd: () {},
-                                        showAction: false,
-                                      ),
-                                    )
-                                  : SliverList.builder(
-                                      itemCount: data.latestReports.length,
-                                      itemBuilder: (context, index) =>
-                                          ReportListCard(
-                                            report: data.latestReports[index],
-                                            onTap: () => _open(
-                                              '/parent/reports/${data.latestReports[index].id}',
-                                            ),
-                                          ),
-                                    ),
-                            ),
-                            _section(
-                              'Target yang perlu perhatian',
-                              () => context.go('/parent/targets'),
-                            ),
-                            SliverPadding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                              ),
-                              sliver: data.attentionTargetItems.isEmpty
-                                  ? SliverToBoxAdapter(
-                                      child: LearningPlansEmptyState(
-                                        onAdd: () {},
-                                        showAction: false,
-                                        title:
-                                            'Belum ada target yang perlu perhatian.',
-                                        description:
-                                            'Target dengan progres di bawah 50% akan muncul di sini.',
-                                      ),
-                                    )
-                                  : SliverList.builder(
-                                      itemCount:
-                                          data.attentionTargetItems.length,
-                                      itemBuilder: (context, index) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 12,
-                                        ),
-                                        child: TargetCard(
-                                          target:
-                                              data.attentionTargetItems[index],
-                                          onTap: () => _open(
-                                            '/parent/targets/${data.attentionTargetItems[index].id}',
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                            ),
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: 34),
                             ),
                           ],
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _cubit.refresh,
+                          child: CustomScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              SliverToBoxAdapter(child: _hero(data)),
+                              if (state.loading)
+                                const SliverToBoxAdapter(
+                                  child: LinearProgressIndicator(),
+                                ),
+                              if (state.error != null)
+                                SliverToBoxAdapter(
+                                  child: ErrorNotice(
+                                    state.error!,
+                                    retry: _cubit.refresh,
+                                    compact: true,
+                                  ),
+                                ),
+                              if (state.children.length > 1)
+                                SliverToBoxAdapter(child: _switcher(state)),
+                              _section(
+                                'Jadwal les anak hari ini',
+                                () => context.go(_schedule(data)),
+                                timezone: data.timezone,
+                              ),
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                ),
+                                sliver: data.todaySessions.isEmpty
+                                    ? SliverToBoxAdapter(
+                                        child: HomeEmptySchedule(
+                                          onCreate: () {},
+                                          showAction: false,
+                                          description:
+                                              'Jadwal les anak Anda akan muncul di sini.',
+                                        ),
+                                      )
+                                    : SliverList.builder(
+                                        itemCount: data.todaySessions.length,
+                                        itemBuilder: (context, index) {
+                                          final lesson =
+                                              data.todaySessions[index];
+                                          return HomeLessonCard(
+                                            key: ValueKey(lesson.id),
+                                            lesson: lesson,
+                                            nextLesson:
+                                                index + 1 <
+                                                    data.todaySessions.length
+                                                ? data.todaySessions[index + 1]
+                                                : null,
+                                            timezone: data.timezone,
+                                            onTap: () => _open(
+                                              '/parent/sessions/${lesson.id}',
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ),
+                              _section(
+                                'Laporan terbaru',
+                                () => _open('/parent/reports'),
+                              ),
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                ),
+                                sliver: data.latestReports.isEmpty
+                                    ? SliverToBoxAdapter(
+                                        child: ReportsEmptyState(
+                                          status: 'published',
+                                          onAdd: () {},
+                                          showAction: false,
+                                        ),
+                                      )
+                                    : SliverList.builder(
+                                        itemCount: data.latestReports.length,
+                                        itemBuilder: (context, index) =>
+                                            ReportListCard(
+                                              report: data.latestReports[index],
+                                              onTap: () => _open(
+                                                '/parent/reports/${data.latestReports[index].id}',
+                                              ),
+                                            ),
+                                      ),
+                              ),
+                              _section(
+                                'Target yang perlu perhatian',
+                                () => context.go('/parent/targets'),
+                              ),
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                ),
+                                sliver: data.attentionTargetItems.isEmpty
+                                    ? SliverToBoxAdapter(
+                                        child: LearningPlansEmptyState(
+                                          onAdd: () {},
+                                          showAction: false,
+                                          title:
+                                              'Belum ada target yang perlu perhatian.',
+                                          description:
+                                              'Target dengan progres di bawah 50% akan muncul di sini.',
+                                        ),
+                                      )
+                                    : SliverList.builder(
+                                        itemCount:
+                                            data.attentionTargetItems.length,
+                                        itemBuilder: (context, index) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: TargetCard(
+                                            target: data
+                                                .attentionTargetItems[index],
+                                            onTap: () => _open(
+                                              '/parent/targets/${data.attentionTargetItems[index].id}',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 34),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -259,20 +272,10 @@ class _ParentDashboardPageState extends State<ParentDashboardPage>
 
   Widget _switcher(ParentDashboardState state) => Padding(
     padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
-    child: NalaraDropdown<String>(
-      value: state.studentId ?? '',
-      decoration: const InputDecoration(labelText: 'Tampilkan anak'),
-      options: [
-        const NalaraDropdownOption(value: '', label: 'Semua anak'),
-        ...state.children.map(
-          (child) => NalaraDropdownOption(
-            value: child.id,
-            label: child.name,
-            searchText: child.grade,
-          ),
-        ),
-      ],
-      onChanged: (id) => _cubit.selectChild(id == '' ? null : id),
+    child: ParentChildSwitcher(
+      children: state.children,
+      selectedChildId: state.studentId,
+      onChanged: _cubit.selectChild,
     ),
   );
   Widget _hero(ParentDashboard data) => HomeRoleHero(
@@ -306,27 +309,12 @@ class _ParentDashboardPageState extends State<ParentDashboardPage>
       ),
     ],
   );
-  Widget _section(String title, VoidCallback onAll) => SliverPadding(
-    padding: const EdgeInsets.fromLTRB(22, 22, 18, 12),
-    sliver: SliverToBoxAdapter(
-      child: Row(
-        children: [
-          Expanded(child: Text(title, style: HomeStyle.heading)),
-          TextButton(
-            onPressed: onAll,
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Lihat semua',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                ),
-                Icon(Icons.chevron_right_rounded, size: 20),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
+  Widget _section(String title, VoidCallback onAll, {String? timezone}) =>
+      SliverToBoxAdapter(
+        child: HomeSectionHeading(
+          title: title,
+          timezone: timezone,
+          onViewAll: onAll,
+        ),
+      );
 }

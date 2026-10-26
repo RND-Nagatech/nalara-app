@@ -2,11 +2,13 @@ import '../../../students/domain/entities/student.dart';
 import '../../../students/domain/repositories/students_repository.dart';
 import '../../../subjects/domain/entities/subject.dart';
 import '../../../subjects/domain/repositories/subjects_repository.dart';
+import '../../../student_groups/domain/student_group.dart';
 
 class TeachingOptions {
   final List<Student> students;
   final List<Subject> subjects;
-  const TeachingOptions(this.students, this.subjects);
+  final List<StudentGroup> groups;
+  const TeachingOptions(this.students, this.subjects, {this.groups = const []});
 }
 
 class LoadTeachingOptions {

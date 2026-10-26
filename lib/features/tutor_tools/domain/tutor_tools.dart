@@ -30,10 +30,11 @@ class LearningActivity {
 }
 
 class ActivityDraft {
-  final String studentId, subjectId, kind, title, content, status, visibility;
+  final List<String> studentIds;
+  final String subjectId, kind, title, content, status, visibility;
   final DateTime? dueAt;
-  const ActivityDraft({
-    required this.studentId,
+  ActivityDraft({
+    required Iterable<String> studentIds,
     required this.subjectId,
     required this.kind,
     required this.title,
@@ -41,7 +42,7 @@ class ActivityDraft {
     required this.status,
     required this.visibility,
     this.dueAt,
-  });
+  }) : studentIds = List.unmodifiable(studentIds);
 }
 
 class ActivitySubmission {
@@ -82,6 +83,7 @@ class TutorPreferences {
   final String displayName, tagline, footer, accentColor;
   final String? logoVersion;
   final bool reminders, progress, reports, assignments;
+  final bool tuitionTeacherReminders, tuitionParentReminders;
   const TutorPreferences({
     this.displayName = '',
     this.tagline = '',
@@ -92,6 +94,8 @@ class TutorPreferences {
     this.progress = true,
     this.reports = true,
     this.assignments = true,
+    this.tuitionTeacherReminders = true,
+    this.tuitionParentReminders = true,
   });
 }
 

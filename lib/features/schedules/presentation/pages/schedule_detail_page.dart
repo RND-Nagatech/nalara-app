@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/errors/app_failure.dart';
+import '../widgets/session_cancellation_dialog.dart';
+import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../../../../shared/widgets/nalara_header.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -78,6 +81,15 @@ class _ScheduleDetailPageState extends State<ScheduleDetailPage> {
     if (mounted && identical(loader, _loader)) await loader.load();
   }
 
+  Future<void> _openRepeat() async {
+    if (_submit.state.busy || _confirming) return;
+    final loader = _loader;
+    await context.push(
+      '/teacher/schedule/${Uri.encodeComponent(widget.id)}/repeat',
+    );
+    if (mounted && identical(loader, _loader)) await loader.load();
+  }
+
   Future<void> _cancel() async {
     final loader = _loader, submit = _submit;
     if (submit.state.busy ||
@@ -87,21 +99,36 @@ class _ScheduleDetailPageState extends State<ScheduleDetailPage> {
       return;
     }
     final id = widget.id;
+    final auth = getIt.isRegistered<AuthCubit>() ? getIt<AuthCubit>() : null;
+    final actor = auth?.state.teacher;
+    bool sameActor() =>
+        auth == null ||
+        (auth.state.status == AuthStatus.authenticated &&
+            identical(auth.state.teacher, actor));
     setState(() => _confirming = true);
-    final confirmed = await confirmAction(
+    final confirmed = await showSessionCancellationDialog(
       context,
-      'Batalkan seluruh pertemuan terjadwal dalam seri ini? Sesi selesai tetap tersimpan.',
+      entireSeries: true,
+      group: (loader.state.value?.participantCount ?? 1) > 1,
+      onSubmit: (_, reason) async {
+        if (!mounted ||
+            !identical(loader, _loader) ||
+            widget.id != id ||
+            !sameActor()) {
+          throw const AppFailure(
+            'Halaman jadwal berubah. Buka kembali seri yang akan dibatalkan.',
+          );
+        }
+        await getIt<SchedulesRepository>().cancelSeries(id, reason);
+        if (mounted && identical(loader, _loader) && sameActor()) {
+          await loader.load();
+        }
+      },
     );
     if (!mounted || !identical(loader, _loader)) return;
     setState(() => _confirming = false);
-    if (!confirmed || !_visible) return;
-    final ok = await submit.run(
-      () => getIt<SchedulesRepository>().cancelSeries(id),
-    );
-    if (!mounted || !identical(loader, _loader)) return;
-    if (ok) {
-      if (_visible) successMessage(context, 'Seri dibatalkan');
-      await loader.load();
+    if (confirmed == true && _visible) {
+      successMessage(context, 'Seri dibatalkan');
     }
   }
 
@@ -197,6 +224,25 @@ class _ScheduleDetailPageState extends State<ScheduleDetailPage> {
           icon: Icons.format_list_bulleted_rounded,
           onPressed: enabled ? _openSessions : null,
         ),
+        if (!cancelled) ...[
+          const SizedBox(height: 12),
+          SessionActionTile(
+            key: const ValueKey('series-repeat'),
+            label: 'Pengulangan jadwal',
+            description: 'Atur hari dan jam untuk pertemuan berikutnya.',
+            onPressed: enabled ? _openRepeat : null,
+          ),
+        ],
+        if (state.value!.recurrenceError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              state.value!.recurrenceError!,
+              style: SessionDetailStyle.body.copyWith(
+                color: SessionDetailStyle.red,
+              ),
+            ),
+          ),
         const SizedBox(height: 20),
         if (submit.error != null)
           Padding(

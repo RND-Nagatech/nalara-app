@@ -9,6 +9,12 @@ import 'package:nalara/utils/app_theme.dart';
 
 const entries = [
   (
+    id: 'teaching-guide',
+    title: 'Panduan mulai mengajar',
+    description: 'Lanjutkan tutorial langkah demi langkah',
+    route: '/teacher/getting-started',
+  ),
+  (
     id: 'reschedule-requests',
     title: 'Permintaan jadwal',
     description: 'Tinjau permintaan perubahan jadwal dari orang tua',
@@ -19,6 +25,12 @@ const entries = [
     title: 'Orang Tua & Keluarga',
     description: 'Kelola data orang tua dan anggota keluarga siswa',
     route: '/teacher/families',
+  ),
+  (
+    id: 'student-groups',
+    title: 'Grup siswa',
+    description: 'Simpan kelompok siswa untuk jadwal les rutin',
+    route: '/teacher/student-groups',
   ),
   (
     id: 'materials',

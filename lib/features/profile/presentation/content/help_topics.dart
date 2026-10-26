@@ -32,16 +32,17 @@ const helpTopics = [
     id: 'getting-started',
     title: 'Bagaimana memulai mengajar?',
     answer:
-        'Mulai dari checklist di Beranda atau buka Panduan mulai mengajar. Kerjakan satu langkah, simpan datanya, lalu lanjutkan ke langkah berikutnya.',
+        'Buka Lainnya → Panduan mulai mengajar untuk mendapatkan petunjuk langsung di menu dan form. Kerjakan satu panduan, simpan datanya, lalu lanjutkan ke panduan berikutnya.',
     steps: [
       'Tambah bidang belajar yang Anda ajarkan, misalnya Matematika, Piano, atau Bahasa Inggris.',
       'Tambah siswa pertama, lalu lengkapi data yang diperlukan.',
       'Buat jadwal untuk siswa dan bidang belajar tersebut.',
       'Buat rencana dan target belajar yang ingin dicapai.',
       'Jika diperlukan, hubungkan orang tua melalui Orang Tua & Keluarga.',
+      'Setelah empat langkah utama selesai, lengkapi profil, zona waktu, grup siswa, dan biaya bimbel sesuai kebutuhan dari halaman Panduan. Langkah tambahan ini opsional.',
     ],
     note:
-        'Langkah otomatis tercentang setelah data tersimpan, bukan hanya setelah form dibuka. Data lama juga dikenali. Lewati sementara tidak menghapus progres; buka kembali melalui Pusat Bantuan. Setelah pertemuan berlangsung, lanjutkan dengan presensi dan laporan sesi.',
+        'Panduan otomatis selesai setelah data tersimpan, bukan hanya setelah form dibuka. Data lama juga dikenali. Lewati tidak menghapus progres. Badge merah di Lainnya dan menu Panduan menunjukkan jumlah panduan yang belum selesai. Setelah pertemuan berlangsung, lanjutkan dengan presensi dan laporan sesi.',
     keywords:
         'mulai mengajar tambah siswa bidang belajar mata pelajaran musik privat',
     route: '/teacher/getting-started',
@@ -82,23 +83,96 @@ const helpTopics = [
     actionLabel: 'Buka daftar siswa',
   ),
   HelpTopic(
+    id: 'profile-basics',
+    title: 'Bagaimana melengkapi profil dan mengubah nomor HP Guru?',
+    answer:
+        'Nomor HP dan avatar dapat dilengkapi dari Profil Guru, baik masuk dengan Google maupun email atau nomor HP dan kata sandi.',
+    steps: [
+      'Buka Lainnya → Profil Guru.',
+      'Ketuk pensil pada nomor HP, masukkan nomor yang benar, lalu ketuk ceklis untuk menyimpan. Batalkan jika tidak ingin mengganti nomor.',
+      'Ketuk tindakan edit avatar pada profil untuk memilih atau mengganti avatar yang tersedia.',
+      'Pastikan hasil simpan sudah berhasil. Nomor HP yang valid digunakan oleh tombol Hubungi Guru di rincian biaya bimbel Orang Tua.',
+    ],
+    note:
+        'Badge kelengkapan profil menghitung nomor HP dan avatar yang belum diisi. Badge Lainnya juga dapat mencakup panduan mengajar yang belum selesai. Simpan nomor tidak berarti nomor telah diverifikasi melalui OTP. Jika nomor sudah digunakan akun lain, ikuti pesan yang ditampilkan.',
+    keywords:
+        'profil nomor hp telepon telpon whatsapp wa google avatar foto pensil ceklis badge merah kelengkapan',
+    route: '/teacher/profile',
+    actionLabel: 'Lengkapi profil Guru',
+  ),
+  HelpTopic(
+    id: 'student-groups',
+    title: 'Bagaimana membuat dan menggunakan Grup siswa?',
+    answer:
+        'Simpan kelompok siswa yang sering belajar bersama agar tidak perlu memilih nama satu per satu setiap membuat jadwal atau aktivitas.',
+    steps: [
+      'Buka Lainnya → Grup siswa, pilih Tambah, lalu isi nama grup dan pilih anggotanya.',
+      'Simpan grup, lalu buka form jadwal atau tambah Tugas & Materi.',
+      'Gunakan pilihan grup untuk mengisi daftar siswa, lalu periksa dan sesuaikan pilihan siswa sebelum menyimpan.',
+      'Edit anggota melalui Grup siswa bila kelompok berubah untuk pemilihan berikutnya.',
+    ],
+    note:
+        'Grup hanya membantu memilih penerima. Anggota aktif yang tersedia dipilih saat grup digunakan; periksa pemberitahuan jika ada anggota tidak tersedia. Mengedit grup tidak otomatis mengubah peserta jadwal, tugas, atau materi yang sudah dibuat. Data dan jawaban tiap siswa tetap terpisah.',
+    keywords:
+        'group grup kelompok siswa anggota banyak multi pilih jadwal tugas materi',
+    route: '/teacher/student-groups',
+    actionLabel: 'Kelola Grup siswa',
+  ),
+  HelpTopic(
     id: 'schedules',
     title: 'Bagaimana membuat jadwal dan mengubah satu pertemuan?',
     answer:
         'Siapkan siswa aktif dan bidang belajar sebelum membuat jadwal pertama.',
     steps: [
       'Buka Jadwal → Tambah jadwal.',
-      'Pilih siswa, bidang belajar, zona waktu, serta waktu mulai dan selesai.',
-      'Isi jumlah pertemuan mingguan: 1 untuk satu pertemuan; lebih dari 1 membuat seri mingguan jika paket mendukung.',
+      'Pilih satu atau beberapa siswa melalui dropdown checkbox, lalu pilih bidang belajar serta waktu mulai dan selesai.',
+      'Jika kelompok sudah disimpan, pilih Grup siswa agar anggotanya langsung terpilih. Anda masih dapat menyesuaikan daftar siswa.',
+      'Zona waktu mengikuti pilihan yang sudah disimpan di Pengaturan. Ketuk Ubah di keterangan waktu untuk membuka Pengaturan, lalu kembali ke form jadwal; isian sebelumnya tetap tersimpan.',
+      'Untuk jadwal rutin, aktifkan Ulangi setiap minggu, ketuk hari yang diinginkan, lalu pilih sampai dihentikan, tanggal akhir, atau jumlah pertemuan. Nonaktifkan repeat untuk satu pertemuan.',
       'Buat jadwal, lalu periksa hasilnya di tab Harian, Mingguan, atau Bulanan.',
-      'Untuk memindahkan satu sesi, buka detail sesi tersebut dan pilih Ubah waktu pertemuan ini.',
+      'Buka detail sesi untuk mengubah waktu atau membatalkan: pilih pertemuan ini saja atau ini dan berikutnya. Pengaturan hari pengulangan tersedia dari detail seri → Pengulangan jadwal.',
+      'Untuk membatalkan, isi alasan 3–500 karakter, periksa cakupan dan alasan pada konfirmasi, lalu ketuk Ya, batalkan. Alasan dapat dibaca Siswa dan Orang Tua yang terhubung melalui detail sesi. Pembatalan seluruh seri tersedia di detail seri; riwayat selesai tidak dihapus.',
     ],
     note:
-        'Perubahan satu sesi tidak memindahkan seluruh seri. Server memeriksa bentrok waktu saat menyimpan. Jadwal berulang mengikuti fitur paket aktif.',
+        'Siswa yang dipilih bersama mengikuti satu sesi kelompok. Perubahan Guru berlaku bagi semua peserta sesuai rentang yang dipilih. Presensi tersimpan mengunci perubahan; pola baru membuat seri lanjutan dan mempertahankan riwayat lama. Repeat otomatis menyiapkan delapan minggu ke depan; Pro/Trial aktif diperlukan untuk kelanjutannya. Jika ada benturan, periksa pesan di detail seri. Permintaan orang tua hanya memindahkan sesi anaknya sendiri.',
     keywords:
-        'jadwal les waktu tanggal zona waktu harian mingguan bulanan seri berulang reschedule pindah',
+        'jadwal les kelompok banyak siswa checkbox waktu tanggal zona waktu harian mingguan bulanan seri berulang reschedule pindah batal alasan konfirmasi',
     route: '/teacher/schedule',
     actionLabel: 'Buka jadwal',
+  ),
+  HelpTopic(
+    id: 'timezone',
+    title: 'Di mana mengatur waktu WIB, WITA, atau WIT?',
+    answer:
+        'Pengaturan adalah satu tempat untuk menyimpan zona waktu Guru. Form jadwal baru mengikuti pilihan yang sudah berhasil disimpan.',
+    steps: [
+      'Buka Lainnya → Pengaturan → Tampilan waktu.',
+      'Pilih WIB, WITA, atau WIT, lalu ketuk Simpan zona waktu dan tunggu pemberitahuan berhasil.',
+      'Saat membuat jadwal, lihat keterangan waktu yang digunakan. Ketuk Ubah untuk membuka Pengaturan bila perlu, lalu kembali ke form; pilihan siswa dan isian jadwal tetap dipertahankan.',
+    ],
+    note:
+        'Pilihan yang belum disimpan atau gagal disimpan tidak mengganti zona akun. Mengganti zona tidak memindahkan waktu sesi atau mengubah zona seri yang sudah dibuat. Jam pada draft dapat tampil berbeda karena konversi zona, tetapi waktu pertemuannya tetap sama. Zona tidak otomatis berubah mengikuti lokasi perangkat.',
+    keywords:
+        'zona waktu timezone wib wita wit jakarta makassar jayapura jam pengaturan simpan',
+    route: '/teacher/settings',
+    actionLabel: 'Buka pengaturan waktu',
+  ),
+  HelpTopic(
+    id: 'schedule-timeline',
+    title: 'Apa arti warna, garis, dan titik pada jadwal les?',
+    answer:
+        'Timeline membantu melihat posisi waktu terhadap jadwal, bukan persentase kemajuan belajar atau bukti kehadiran.',
+    steps: [
+      'Kartu netral menandakan sesi belum dimulai. Detail sesi tetap dapat dibuka untuk melihat informasi atau tindakan yang tersedia.',
+      'Penekanan hijau dan titik berdenyut menandakan waktu sedang berada di rentang sesi. Warna amber menandakan sepuluh menit terakhir.',
+      'Garis di antara sesi bergerak mengikuti waktu. Titik kembali kosong ketika waktu sesi sudah lewat; periksa presensi untuk mengetahui kehadiran yang benar-benar dicatat.',
+    ],
+    note:
+        'Presensi tersedia saat sesi dimulai, bukan sebelumnya. Jam selesai yang terlewati tidak otomatis menyimpan presensi, menerbitkan laporan, atau membuktikan les sudah dilaksanakan. Gerakan dapat berkurang atau nonaktif mengikuti pengaturan animasi perangkat.',
+    keywords:
+        'timeline garis titik bergerak animasi hijau amber kuning berlangsung hampir selesai presensi belum mulai',
+    route: '/teacher/schedule',
+    actionLabel: 'Lihat timeline jadwal',
   ),
   HelpTopic(
     id: 'reschedule',
@@ -113,7 +187,7 @@ const helpTopics = [
       'Tunggu orang tua menerima atau menolak tawaran. Sesi baru dipindahkan setelah tawaran diterima.',
     ],
     note:
-        'Fitur ini memerlukan Trial aktif atau Tutor Pro milik Guru; orang tua tidak membeli paket sendiri. Hanya satu pertemuan yang berubah. Slot belum dipesan saat tampil dan diperiksa ulang saat disetujui. Permintaan yang sudah tidak berlaku dapat menjadi Kedaluwarsa; muat ulang jika jadwal berubah.',
+        'Fitur ini memerlukan Trial aktif atau Tutor Pro milik Guru; orang tua tidak membeli paket sendiri. Selama permintaan masih menunggu, pengajuan baru untuk sesi tersebut tidak tersedia. Hanya satu pertemuan yang berubah. Slot belum dipesan saat tampil dan diperiksa ulang saat disetujui. Permintaan yang sudah tidak berlaku dapat menjadi Kedaluwarsa; muat ulang jika jadwal berubah.',
     keywords:
         'permintaan jadwal reschedule orang tua persetujuan setujui tolak tawarkan waktu lain pending kedaluwarsa',
     route: '/teacher/reschedule-requests',
@@ -137,6 +211,24 @@ const helpTopics = [
     actionLabel: 'Buka target belajar',
   ),
   HelpTopic(
+    id: 'progress-summary',
+    title: 'Mengapa periode rencana, target minggu ini, dan grafik berbeda?',
+    answer:
+        'Ketiganya memakai rentang dan ukuran yang berbeda. Periode rencana adalah tanggal yang Anda tetapkan, sedangkan Target minggu ini memakai minggu kalender Senin–Minggu pada zona waktu Guru.',
+    steps: [
+      'Buka detail rencana untuk memeriksa periode mulai dan berakhir yang Anda isi.',
+      'Di Ringkasan siswa, Target minggu ini memasukkan target dari rencana yang periodenya beririsan dengan minggu kalender tersebut. Rencana yang berakhir pada Senin masih dapat masuk minggu itu.',
+      'Persentase Target minggu ini adalah jumlah target selesai dibanding jumlah target yang dihitung minggu itu. Progres keseluruhan adalah rata-rata progres target yang masih diperhitungkan; keduanya tidak selalu sama.',
+      'Grafik menampilkan tujuh hari terakhir berdasarkan riwayat progres target yang saat ini diperhitungkan. Jika progres tidak berubah, garis dapat tetap datar walaupun periode rencana sudah berakhir.',
+    ],
+    note:
+        'Lewat tanggal akhir rencana tidak otomatis mengarsipkan target. Target diarsipkan atau dibatalkan tidak masuk agregat. Belum ada target berbeda dengan 0%; tanpa riwayat progres, grafik tidak dibuat. Grafik bukan bukti bahwa Guru mengisi perubahan baru setiap hari.',
+    keywords:
+        'grafik ringkasan periode tanggal minggu ini senin minggu tujuh 7 hari keseluruhan rata rata datar progres progress',
+    route: '/teacher/students',
+    actionLabel: 'Periksa ringkasan siswa',
+  ),
+  HelpTopic(
     id: 'session-reports',
     title: 'Bagaimana mencatat presensi dan laporan?',
     answer:
@@ -144,12 +236,15 @@ const helpTopics = [
     steps: [
       'Buka Jadwal atau Presensi, lalu pilih sesi siswa yang dimaksud.',
       'Pilih status kehadiran dan periksa kembali sebelum menekan Simpan presensi.',
-      'Pilih Tulis laporan sesi, isi materi, ringkasan, perkembangan, dan catatan yang diperlukan.',
+      'Untuk sesi kelompok, pilih Hadir, Izin, atau Alpa pada tiap nama. Tandai semua hadir dapat mempercepat, lalu sesuaikan siswa yang izin atau tidak hadir sebelum menyimpan sekaligus.',
+      'Siswa yang belum dipilih tetap belum dicatat. Presensi yang sudah tersimpan tidak ikut diubah pada penyimpanan berikutnya.',
+      'Pilih Tulis laporan sesi. Untuk sesi kelompok, pilih satu atau beberapa siswa yang tersedia, lalu isi materi, ringkasan, perkembangan, dan catatan bersama. Periksa pilihan target masing-masing siswa bila digunakan.',
       'Tentukan visibilitas laporan, lalu pilih Simpan draft.',
       'Buka draf, periksa isinya, lalu terbitkan setelah siap dibagikan sesuai visibilitas.',
+      'Badge angka merah pada Lainnya → Laporan Belajar menunjukkan total laporan yang masih draf, bukan notifikasi belum dibaca. Ketuk menu itu saat ada badge untuk langsung membuka tab Draft.',
     ],
     note:
-        'Presensi yang sudah disimpan dikunci dan tidak dapat diubah melalui form ini. Laporan yang sudah diterbitkan juga tidak dapat diedit. Draf belum tampil di portal; laporan terbit tetap mengikuti pilihan visibilitasnya.',
+        'Simpan draft belum menerbitkan atau membagikan laporan; badge hilang jika seluruh draf sudah diterbitkan. Presensi tersimpan dikunci dan hanya tersedia mulai waktu sesi. Satu form kelompok membuat laporan terpisah untuk setiap siswa yang dipilih, bukan membuka data anak lain. Siswa yang dibatalkan atau sudah memiliki laporan tidak dapat dipilih kembali. Notifikasi kehadiran hanya dikirim ke orang tua anak terkait. Laporan terbit tidak dapat diedit. Draf belum tampil di portal; laporan terbit mengikuti pilihan visibilitasnya. Tinjau penerima pada konfirmasi sebelum menerbitkan.',
     keywords: 'laporan sesi presensi hadir izin jadwal draft terbit',
     route: '/teacher/schedule',
     actionLabel: 'Buka jadwal',
@@ -184,7 +279,7 @@ const helpTopics = [
       'Penerima membuka NALARA, memilih peran Siswa atau Orang Tua sesuai kode, lalu memasukkan kode tersebut.',
     ],
     note:
-        'Kode berlaku 7 hari dan digunakan sekali. Jangan membagikan kode ke pihak lain. Cabut kode berbeda dengan mencabut akses yang sudah aktif. Siswa tidak mendapat akses ke data saudara atau seluruh keluarga.',
+        'Kode dapat digunakan kembali tanpa batas waktu sampai diganti atau dicabut Guru. Simpan kode saat dibuat dan jangan membagikannya ke pihak lain. Cabut kode berbeda dengan mencabut akses yang sudah aktif. Siswa tidak mendapat akses ke data saudara atau seluruh keluarga.',
     keywords: 'kode referral orang tua keluarga siswa akses cabut kedaluwarsa',
     route: '/teacher/families',
     actionLabel: 'Buka Orang Tua & Keluarga',
@@ -208,19 +303,55 @@ const helpTopics = [
     actionLabel: 'Kelola siswa',
   ),
   HelpTopic(
+    id: 'tuition-fees',
+    title: 'Bagaimana mengatur biaya bimbel dan menandai lunas?',
+    answer:
+        'Guru mengelola satu biaya bimbel yang sedang berlaku untuk setiap siswa. Orang Tua hanya melihat nominal, jatuh tempo, dan statusnya; akun Siswa tidak melihat biaya ini.',
+    steps: [
+      'Buka Siswa, pilih anak yang dimaksud, lalu geser ke tab Biaya bimbel.',
+      'Ketuk Atur biaya bimbel, isi nominal rupiah dan tanggal jatuh tempo, lalu simpan.',
+      'Setelah pembayaran benar-benar diterima dan diperiksa, gunakan tindakan Tandai lunas dan setujui konfirmasinya. Membuka notifikasi tidak melunasi biaya.',
+      'Untuk tagihan berikutnya, gunakan Atur biaya periode berikutnya dan isi nominal serta jatuh tempo baru secara eksplisit.',
+    ],
+    note:
+        'Pengingat otomatis memerlukan Tutor Pro atau Trial aktif dan mengikuti preferensi notifikasi. Orang Tua yang terhubung dapat membuka WhatsApp melalui Hubungi Guru jika nomor HP Guru valid. WhatsApp hanya menyiapkan pesan, tidak mengirim otomatis atau memverifikasi pembayaran. Fitur ini bukan pembayaran online, riwayat invoice, atau pembuatan tagihan berulang otomatis; terpisah dari pembayaran langganan NALARA.',
+    keywords:
+        'biaya bimbel pembayaran murid nominal rupiah jatuh tempo tagihan lunas belum lunas whatsapp wa periode berikutnya',
+    route: '/teacher/students',
+    actionLabel: 'Buka siswa untuk mengatur biaya',
+  ),
+  HelpTopic(
+    id: 'tuition-reminders',
+    title: 'Bagaimana mengatur pengingat biaya untuk Guru dan Orang Tua?',
+    answer:
+        'Pengingat biaya hanya berlaku selama biaya belum lunas. Pengingat untuk Guru dan pengingat ke Orang Tua memiliki pengaturan terpisah.',
+    steps: [
+      'Buka Lainnya → Pengaturan → Atur preferensi notifikasi pada Tutor Pro atau Trial aktif.',
+      'Atur Pengingat biaya untuk saya: mulai hari jatuh tempo, maksimal sekali sehari per siswa selama belum lunas.',
+      'Atur Pengingat biaya ke Orang Tua: hanya H-1 dan hari jatuh tempo, kepada Orang Tua yang masih terhubung; tidak dikirim ke Siswa.',
+      'Simpan preferensi. Ketuk notifikasi biaya untuk membuka siswa langsung ke tab Biaya bimbel, lalu perbarui status jika pembayaran sudah diterima.',
+    ],
+    note:
+        'Menandai lunas menghentikan pengingat berikutnya. Pengingat biaya tidak mengikuti toggle Pengingat jadwal & target. Waktu pengingat mengikuti zona Guru; izin perangkat dan layanan push juga memengaruhi kemunculan pop-up. Untuk biaya berikutnya, Guru harus mengaturnya kembali, bukan menunggu tagihan baru dibuat otomatis.',
+    keywords:
+        'pengingat biaya notifikasi h-1 h1 hari h jatuh tempo guru orang tua preferensi lunas reminder pro trial',
+    route: '/teacher/notification-preferences',
+    actionLabel: 'Atur pengingat biaya',
+  ),
+  HelpTopic(
     id: 'tasks-materials',
     title: 'Bagaimana membagikan tugas, materi, dan tanggapan jawaban?',
     answer:
         'Tugas & Materi membantu Guru membagikan instruksi atau bahan belajar berbentuk teks kepada siswa yang dipilih.',
     steps: [
       'Buka Lainnya → Tugas & Materi, lalu tambah aktivitas.',
-      'Pilih siswa, bidang belajar, serta jenis Tugas atau Materi. Isi judul dan instruksi atau isi materinya.',
+      'Pilih satu atau beberapa siswa melalui dropdown checkbox, atau gunakan Grup siswa lalu sesuaikan penerimanya. Pilih bidang belajar serta jenis Tugas atau Materi, lalu isi judul dan instruksi atau isi materinya.',
       'Untuk tugas, tentukan batas waktu jika diperlukan. Pilih akses Guru & siswa atau Guru, siswa & orang tua sesuai kebutuhan.',
       'Pilih Simpan draft untuk menyiapkan dahulu, atau Bagikan sekarang untuk menerbitkan, lalu simpan aktivitas.',
       'Untuk tugas yang sudah dijawab siswa, buka detail tugas dan gunakan Beri tanggapan untuk meninjau jawabannya.',
     ],
     note:
-        'Tersedia pada Trial aktif atau Tutor Pro. Draf tidak tampil di portal. Materi tidak memerlukan jawaban siswa. Upload attachment belum tersedia; jangan memasukkan dokumen sensitif ke isi yang dibagikan.',
+        'Tersedia pada Trial aktif atau Tutor Pro. Setiap siswa mendapat aktivitas dan jawaban terpisah; grup tidak membagikan jawaban antarsiswa. Mengubah grup tidak mengganti penerima aktivitas yang sudah dibuat. Draf tidak tampil di portal. Materi tidak memerlukan jawaban siswa. Upload attachment belum tersedia; jangan memasukkan dokumen sensitif ke isi yang dibagikan.',
     keywords:
         'tugas materi aktivitas instruksi jawaban feedback tanggapan homework deadline attachment lampiran upload pro',
     route: '/teacher/materials',
@@ -235,11 +366,12 @@ const helpTopics = [
       'Buka Lainnya → Notifikasi dan perhatikan penanda pesan yang belum dibaca.',
       'Ketuk pesan untuk membuka halaman terkait. Pesan yang dibuka ditandai sudah dibaca.',
       'Gunakan Tandai semua dibaca jika seluruh pesan sudah ditinjau.',
+      'Saat ajakan Aktifkan notifikasi NALARA muncul, pilih aktifkan bila ingin push, lalu lanjutkan izin resmi perangkat atau browser. Nanti saja tidak menghalangi penggunaan aplikasi.',
       'Jika push tidak muncul, periksa izin notifikasi NALARA di pengaturan perangkat dan koneksi internet. Buka ulang aplikasi lalu muat ulang inbox.',
       'Jika paket mendukung, buka preferensi notifikasi Guru untuk meninjau kategori push yang diaktifkan.',
     ],
     note:
-        'Pesan orang tua/siswa mengikuti hubungan anak dan hak aksesnya; tidak disebarkan ke semua keluarga. Pengingat otomatis tertentu mengikuti paket aktif. Mengubah preferensi push Guru tidak menghapus isi inbox.',
+        'Izin perangkat berbeda dengan kategori preferensi notifikasi. Jika izin ditolak atau memilih Nanti saja, periksa pengaturan aplikasi/perizinan situs untuk mengaktifkannya, lalu buka kembali NALARA. Pesan orang tua/siswa mengikuti hubungan anak dan hak aksesnya; tidak disebarkan ke semua keluarga. Pengingat otomatis tertentu mengikuti paket aktif. Mengubah preferensi push Guru tidak menghapus isi inbox; pengingat biaya memiliki dua pengaturan tersendiri.',
     keywords:
         'notifikasi pemberitahuan push firebase fcm pengingat reminder belum dibaca baca semua izin perangkat',
     route: '/teacher/notifications',

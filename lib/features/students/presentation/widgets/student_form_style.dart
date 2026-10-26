@@ -7,7 +7,7 @@ abstract final class StudentFormStyle {
       muted = Color(0xFF78808A),
       line = Color(0xFFDDE0E5),
       paleGreen = Color(0xFFEAF2E9);
-  static const headerArtwork = 'assets/Icon/Icon lainnya.png';
+  static const headerArtwork = 'assets/data siswa/data siswa.png';
   static const label = TextStyle(
     fontFamily: 'NalaraInter',
     fontSize: 13,
@@ -30,7 +30,7 @@ abstract final class StudentFormStyle {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFFEFEFE),
+      fillColor: Colors.white,
       isDense: true,
       hintStyle: input.copyWith(color: muted),
       counterStyle: input.copyWith(fontSize: 11, color: muted),

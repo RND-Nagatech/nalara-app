@@ -74,6 +74,7 @@ class ParentPortalRepositoryImpl implements ParentPortalRepository {
   Future<SessionOverview> sessionOverview(String id) async {
     final json = await remote.sessionOverview(id);
     return SessionOverview(
+      reschedulePending: json['reschedulePending'] as bool?,
       lesson: LessonModel(Map<String, dynamic>.from(json['lesson'])).toEntity(),
       schedule: ScheduleModel(
         Map<String, dynamic>.from(json['schedule']),

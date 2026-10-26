@@ -31,7 +31,7 @@ abstract final class ScheduleFormStyle {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFF7F9FA),
+      fillColor: Colors.white,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),

@@ -156,6 +156,9 @@ class AgendaTabBody extends StatelessWidget {
                         AgendaLessonCard(
                           lesson: lesson,
                           timezone: timezone,
+                          nextLesson: index + 1 < data.items.length
+                              ? data.items[index + 1]
+                              : null,
                           onTap: () => onOpen(lesson),
                         ),
                     ],

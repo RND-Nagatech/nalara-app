@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
 import '../../domain/entities/schedule_period.dart';
 import 'agenda_style.dart';
 
@@ -56,38 +57,44 @@ class AgendaEmptyState extends StatelessWidget {
         ),
         if (showAction) ...[
           const SizedBox(height: 18),
-          FilledButton(
-            key: ValueKey(
-              '${attendance ? 'attendance' : 'agenda'}-add-empty-${period.name}',
-            ),
-            onPressed: onAdd,
-            style: FilledButton.styleFrom(
-              backgroundColor: AgendaStyle.green,
-              foregroundColor: Colors.white,
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              minimumSize: const Size(0, 46),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!attendance) ...[
-                  const Icon(Icons.add_circle, size: 23),
-                  const SizedBox(width: 12),
-                ],
-                Flexible(
-                  child: Text(
-                    attendance ? 'Buat jadwal' : 'Tambah sekarang',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'NalaraInter',
-                      fontSize: 14,
-                      height: 1.3,
-                      fontWeight: FontWeight.w500,
+          TutorialTarget(
+            id: 'add-schedule',
+            child: FilledButton(
+              key: ValueKey(
+                '${attendance ? 'attendance' : 'agenda'}-add-empty-${period.name}',
+              ),
+              onPressed: onAdd,
+              style: FilledButton.styleFrom(
+                backgroundColor: AgendaStyle.green,
+                foregroundColor: Colors.white,
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                minimumSize: const Size(0, 46),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!attendance) ...[
+                    const Icon(Icons.add_circle, size: 23),
+                    const SizedBox(width: 12),
+                  ],
+                  Flexible(
+                    child: Text(
+                      attendance ? 'Buat jadwal' : 'Tambah sekarang',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'NalaraInter',
+                        fontSize: 14,
+                        height: 1.3,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

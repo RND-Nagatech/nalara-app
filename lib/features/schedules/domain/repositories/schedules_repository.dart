@@ -13,7 +13,8 @@ abstract class SchedulesRepository {
   Future<Schedule> schedule(String id);
   Future<Schedule> create(ScheduleDraft draft);
   Future<void> reschedule(String id, DateTime startAt, DateTime endAt);
-  Future<void> cancelSession(String id);
-  Future<void> cancelSeries(String scheduleId);
+  Future<void> cancelSession(String id, String reason);
+  Future<void> cancelSeries(String scheduleId, String reason);
   Future<void> attendance(String id, String status);
+  Future<void> attendanceBatch(String id, List<AttendanceSelection> entries);
 }

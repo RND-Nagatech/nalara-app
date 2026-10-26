@@ -2,14 +2,14 @@ import 'dart:async';
 import 'package:nalara/features/teaching_guide/domain/teaching_guide.dart';
 
 TeachingGuide guideValue({
-  bool dismissed = false,
+  bool tutorialSeen = false,
   bool subject = false,
   bool student = false,
   bool schedule = false,
   bool target = false,
   bool parent = false,
 }) => TeachingGuide(
-  dismissed: dismissed,
+  tutorialSeen: tutorialSeen,
   hasSubject: subject,
   hasStudent: student,
   hasSchedule: schedule,
@@ -35,11 +35,11 @@ class TeachingGuideFake implements TeachingGuideRepository {
   }
 
   @override
-  Future<bool> setDismissed(bool dismissed) async {
-    saves.add(dismissed);
+  Future<bool> acknowledgeTutorial() async {
+    saves.add(true);
     if (saveError != null) throw saveError!;
-    final result = pendingSave == null ? dismissed : await pendingSave!.future;
-    value = value.withDismissed(result);
+    final result = pendingSave == null ? true : await pendingSave!.future;
+    value = value.withTutorialSeen(result);
     return result;
   }
 }

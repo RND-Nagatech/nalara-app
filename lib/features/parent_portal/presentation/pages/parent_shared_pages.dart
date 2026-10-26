@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../utils/injector.dart';
-import '../../../auth/presentation/bloc/auth_cubit.dart';
+import '../../../access/domain/entities/app_role.dart';
+import '../../../access/presentation/widgets/portal_account_actions.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/more_page.dart';
 import '../../../profile/presentation/widgets/more_menu_tile.dart';
@@ -55,11 +56,14 @@ class ParentSharedMorePage extends StatelessWidget {
         route: '/parent/materials',
         icon: Icons.auto_stories_rounded,
       ),
+      MoreMenuItem(
+        id: 'help',
+        title: 'Pusat Bantuan',
+        description: 'Panduan jadwal, perkembangan, dan biaya anak',
+        route: '/parent/help',
+        icon: Icons.help_rounded,
+      ),
     ],
-    footer: OutlinedButton.icon(
-      onPressed: () => getIt<AuthCubit>().changeUser(),
-      icon: const Icon(Icons.logout),
-      label: const Text('Ganti pengguna'),
-    ),
+    footer: const PortalAccountActions(role: AppRole.parent),
   );
 }

@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/domain/app_timezones.dart';
 import '../../../../shared/widgets/nalara_card_style.dart';
 import '../../../auth/domain/entities/teacher.dart';
 import 'profile_style.dart';
 
 class ProfileAccountCard extends StatelessWidget {
   final Teacher teacher;
+  final Widget? phoneEditor;
 
-  const ProfileAccountCard({super.key, required this.teacher});
+  const ProfileAccountCard({
+    super.key,
+    required this.teacher,
+    this.phoneEditor,
+  });
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -33,18 +39,19 @@ class ProfileAccountCard extends StatelessWidget {
             value: teacher.email.isEmpty ? 'Belum tersedia' : teacher.email,
           ),
           const Divider(height: 1, color: ProfileStyle.line),
-          _AccountRow(
-            label: 'Nomor HP',
-            value: teacher.phone?.trim().isNotEmpty == true
-                ? teacher.phone!
-                : 'Belum ditambahkan',
-          ),
+          phoneEditor ??
+              _AccountRow(
+                label: 'Nomor HP',
+                value: teacher.phone?.trim().isNotEmpty == true
+                    ? teacher.phone!
+                    : 'Belum ditambahkan',
+              ),
           const Divider(height: 1, color: ProfileStyle.line),
           _AccountRow(
             label: 'Zona waktu',
             value: teacher.timezone.isEmpty
                 ? 'Belum tersedia'
-                : teacher.timezone,
+                : AppTimezones.label(teacher.timezone),
           ),
         ],
       ),

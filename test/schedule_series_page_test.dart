@@ -50,7 +50,7 @@ class SeriesRepositoryFake implements SchedulesRepository {
   }
 
   @override
-  Future<void> cancelSeries(String scheduleId) async {
+  Future<void> cancelSeries(String scheduleId, String reason) async {
     cancelled.add(scheduleId);
     if (cancel != null) await cancel!(scheduleId);
     final old = records[scheduleId]!;
@@ -61,6 +61,7 @@ class SeriesRepositoryFake implements SchedulesRepository {
       timezone: old.timezone,
       recurrence: old.recurrence,
       status: 'cancelled',
+      cancellationReason: reason,
       repeatCount: old.repeatCount,
       startAt: old.startAt,
       endAt: old.endAt,
@@ -136,8 +137,15 @@ void main() {
   }
 
   Future<void> confirmCancel(WidgetTester tester, {bool settle = true}) async {
-    await tap(tester, byId('series-cancel'));
-    await tap(tester, find.text('Lanjutkan'), settle: settle);
+    if (find.text('Konfirmasi pembatalan').evaluate().isEmpty) {
+      await tap(tester, byId('series-cancel'));
+      await tester.enterText(
+        find.byKey(const ValueKey('cancel-reason')),
+        'Guru berhenti mengajar sementara.',
+      );
+      await tap(tester, find.text('Lanjutkan'));
+    }
+    await tap(tester, find.text('Ya, batalkan seri'), settle: settle);
   }
 
   Future<void> dismissNotice(WidgetTester tester) async {
@@ -310,12 +318,12 @@ void main() {
     await tap(tester, byId('series-cancel'));
     expect(
       find.text(
-        'Batalkan seluruh pertemuan terjadwal dalam seri ini? Sesi selesai tetap tersimpan.',
+        'Semua pertemuan yang masih terjadwal pada seri ini dibatalkan. Pengulangan seri ini dihentikan.',
       ),
       findsOneWidget,
     );
     expect(repository.cancelled, isEmpty);
-    await tap(tester, find.text('Batal'));
+    await tap(tester, find.text('Tidak jadi'));
     expect(repository.cancelled, isEmpty);
     expect(repository.reads, ['s1']);
     expect(
@@ -380,7 +388,7 @@ void main() {
       expect(repository.cancelled, ['s1']);
       expect(
         tester.widget<FilledButton>(byId('series-cancel')).onPressed,
-        isNotNull,
+        isNull,
       );
       repository.cancel = null;
       await confirmCancel(tester);
@@ -433,7 +441,12 @@ void main() {
       await render(tester);
       await tap(tester, byId('series-cancel'));
       await render(tester, id: 's2');
+      await tester.enterText(
+        find.byKey(const ValueKey('cancel-reason')),
+        'Guru sedang sakit.',
+      );
       await tap(tester, find.text('Lanjutkan'));
+      await tap(tester, find.text('Ya, batalkan seri'));
       expect(repository.cancelled, isEmpty);
       expect(find.text('Mingguan · 8 pertemuan'), findsOneWidget);
     },
@@ -487,7 +500,7 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       await tap(tester, byId('series-cancel'));
-      await tap(tester, find.text('Batal'));
+      await tap(tester, find.text('Tidak jadi'));
       expect(repository.cancelled, isEmpty);
     },
   );

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/state/teaching_catalog_refresh.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
 import '../../../../utils/injector.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
 import '../../domain/repositories/subjects_repository.dart';
 import '../bloc/subjects_cubit.dart';
 import '../widgets/subject_form_style.dart';
@@ -151,10 +152,13 @@ class _SubjectsPageState extends State<SubjectsPage>
 
   Widget _addButton() => Padding(
     padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
-    child: FilledButton(
-      key: const ValueKey('subjects-add'),
-      onPressed: () => _open('/teacher/subjects/new', adding: true),
-      child: const Text('Tambah bidang belajar'),
+    child: TutorialTarget(
+      id: 'add-subject',
+      child: FilledButton(
+        key: const ValueKey('subjects-add'),
+        onPressed: () => _open('/teacher/subjects/new', adding: true),
+        child: const Text('Tambah bidang belajar'),
+      ),
     ),
   );
 

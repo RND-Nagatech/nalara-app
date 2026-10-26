@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/state/teaching_catalog_refresh.dart';
 import '../../../../utils/injector.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
 import '../../domain/entities/student_filter.dart';
 import '../../domain/usecases/load_students.dart';
 import '../bloc/students_cubit.dart';
@@ -159,14 +160,17 @@ class _StudentsPageState extends State<StudentsPage>
             backgroundColor: StudentsStyle.cream,
             floatingActionButton:
                 !widget.readOnly && state.current.data?.items.isNotEmpty == true
-                ? FloatingActionButton.extended(
-                    key: const ValueKey('students-add'),
-                    heroTag: 'students-add',
-                    backgroundColor: StudentsStyle.green,
-                    foregroundColor: Colors.white,
-                    onPressed: () => _open('/teacher/students/new'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Tambah'),
+                ? TutorialTarget(
+                    id: 'add-student',
+                    child: FloatingActionButton.extended(
+                      key: const ValueKey('students-add'),
+                      heroTag: 'students-add',
+                      backgroundColor: StudentsStyle.green,
+                      foregroundColor: Colors.white,
+                      onPressed: () => _open('/teacher/students/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Tambah'),
+                    ),
                   )
                 : null,
             body: SafeArea(

@@ -22,18 +22,24 @@ import '../widgets/student_profile_card.dart';
 import '../widgets/student_detail_tabs.dart';
 import '../widgets/student_summary_cards.dart';
 import '../bloc/student_detail_cubit.dart';
+import '../../../tuition_fees/domain/tuition_repository.dart';
+import '../../../tuition_fees/presentation/tuition_fee_section.dart';
 
 class StudentDetailPage extends StatefulWidget {
   final String id;
   final StudentOverviewLoader? loader;
   final bool readOnly;
   final String routePrefix;
+  final String? initialTab;
+  final TuitionReader? tuitionReader;
   const StudentDetailPage({
     super.key,
     required this.id,
     this.loader,
     this.readOnly = false,
     this.routePrefix = '/teacher',
+    this.initialTab,
+    this.tuitionReader,
   }) : assert(!readOnly || loader != null);
   @override
   State<StudentDetailPage> createState() => _StudentDetailPageState();
@@ -53,7 +59,10 @@ class _StudentDetailPageState extends State<StudentDetailPage>
   void initState() {
     super.initState();
     _tabs = TabController(
-      length: widget.readOnly ? 5 : StudentDetailTab.values.length,
+      length: widget.readOnly ? 6 : StudentDetailTab.values.length,
+      initialIndex: widget.initialTab == 'tuition'
+          ? StudentDetailTab.tuition.index
+          : 0,
       vsync: this,
     );
     _bind();
@@ -75,8 +84,14 @@ class _StudentDetailPageState extends State<StudentDetailPage>
     if (oldWidget.id != widget.id) {
       _loader.close();
       _submit.close();
-      _tabs.index = 0;
+      _tabs.index = widget.initialTab == 'tuition'
+          ? StudentDetailTab.tuition.index
+          : 0;
       _bind();
+    } else if (oldWidget.initialTab != widget.initialTab) {
+      _tabs.index = widget.initialTab == 'tuition'
+          ? StudentDetailTab.tuition.index
+          : 0;
     }
   }
 
@@ -304,7 +319,7 @@ class _StudentDetailPageState extends State<StudentDetailPage>
                   controller: _tabs,
                   height: MediaQuery.textScalerOf(context).scale(12) * 1.5 + 32,
                   labels: widget.readOnly
-                      ? studentDetailTabLabels.take(5).toList()
+                      ? studentDetailTabLabels.take(6).toList()
                       : studentDetailTabLabels,
                 ),
               ),
@@ -315,7 +330,7 @@ class _StudentDetailPageState extends State<StudentDetailPage>
             controller: _tabs,
             children: [
               for (final tab in StudentDetailTab.values.take(
-                widget.readOnly ? 5 : 6,
+                widget.readOnly ? 6 : StudentDetailTab.values.length,
               ))
                 Builder(
                   builder: (context) => CustomScrollView(
@@ -411,6 +426,19 @@ class _StudentDetailPageState extends State<StudentDetailPage>
     final id = Uri.encodeComponent(data.student.id);
     final active = !widget.readOnly && data.student.status == 'active';
     return switch (tab) {
+      StudentDetailTab.tuition => TuitionFeeSection(
+        key: ValueKey('student-tuition-${data.student.id}'),
+        studentId: data.student.id,
+        studentName: data.student.name,
+        reader:
+            widget.tuitionReader ??
+            (widget.readOnly
+                ? getIt<TuitionReader>(instanceName: 'parent')
+                : getIt<TuitionRepository>()),
+        readOnly: widget.readOnly,
+        active: data.student.status == 'active',
+        refreshToken: data,
+      ),
       StudentDetailTab.summary => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -454,15 +482,25 @@ class _StudentDetailPageState extends State<StudentDetailPage>
         key: const ValueKey('student-plans-card'),
         title: 'Target & bidang belajar',
         children: [
-          for (final plan in data.plans)
+          for (var index = 0; index < data.plans.length; index++) ...[
+            if (index > 0)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Color(0xFFE2E2DE),
+                ),
+              ),
             _related(
-              key: ValueKey('student-plan-${plan.id}'),
-              title: plan.title,
+              key: ValueKey('student-plan-${data.plans[index].id}'),
+              title: data.plans[index].title,
               subtitle:
-                  '${plan.subjectName}\n${getIt<PlanProgressLabel>()(plan)} · ${DateTimeUtils.date(plan.startAt)} – ${DateTimeUtils.date(plan.endAt)}',
+                  '${data.plans[index].subjectName}\n${getIt<PlanProgressLabel>()(data.plans[index])} · ${DateTimeUtils.date(data.plans[index].startAt)} – ${DateTimeUtils.date(data.plans[index].endAt)}',
               route:
-                  '${widget.routePrefix}/plans/${Uri.encodeComponent(plan.id)}',
+                  '${widget.routePrefix}/plans/${Uri.encodeComponent(data.plans[index].id)}',
             ),
+          ],
           if (active) ...[
             const SizedBox(height: 8),
             StudentSoftButton(
@@ -477,29 +515,43 @@ class _StudentDetailPageState extends State<StudentDetailPage>
         key: const ValueKey('student-sessions-card'),
         title: 'Riwayat sesi',
         children: [
-          for (final lesson in data.lessons)
+          for (var index = 0; index < data.lessons.length; index++) ...[
+            if (index > 0)
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: StudentDetailStyle.line,
+              ),
             _related(
-              key: ValueKey('student-session-${lesson.id}'),
-              title: DateTimeUtils.full(lesson.startAt),
+              key: ValueKey('student-session-${data.lessons[index].id}'),
+              title: DateTimeUtils.full(data.lessons[index].startAt),
               subtitle:
-                  '${statusLabel(lesson.status)} · ${statusLabel(lesson.attendance)}',
+                  '${statusLabel(data.lessons[index].status)} · ${statusLabel(data.lessons[index].attendance)}',
               route:
-                  '${widget.routePrefix}/sessions/${Uri.encodeComponent(lesson.id)}',
+                  '${widget.routePrefix}/sessions/${Uri.encodeComponent(data.lessons[index].id)}',
             ),
+          ],
         ],
       ),
       StudentDetailTab.reports => StudentSectionCard(
         key: const ValueKey('student-reports-card'),
         title: 'Laporan belajar',
         children: [
-          for (final report in data.reports)
+          for (var index = 0; index < data.reports.length; index++) ...[
+            if (index > 0)
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: StudentDetailStyle.line,
+              ),
             _related(
-              key: ValueKey('student-report-${report.id}'),
-              title: report.topic,
-              subtitle: statusLabel(report.status),
+              key: ValueKey('student-report-${data.reports[index].id}'),
+              title: data.reports[index].topic,
+              subtitle: statusLabel(data.reports[index].status),
               route:
-                  '${widget.routePrefix}/reports/${Uri.encodeComponent(report.id)}',
+                  '${widget.routePrefix}/reports/${Uri.encodeComponent(data.reports[index].id)}',
             ),
+          ],
         ],
       ),
       StudentDetailTab.family => StudentSectionCard(
@@ -546,10 +598,10 @@ class _StudentDetailPageState extends State<StudentDetailPage>
         title: 'Kode referral Siswa',
         children: [
           const Text(
-            'Kode berlaku 7 hari, hanya dapat digunakan sekali, dan hanya ditampilkan saat dibuat. Kode baru menggantikan kode lama yang belum dipakai.',
+            'Kode dapat digunakan kembali tanpa batas waktu sampai diganti atau dicabut. Kode baru menonaktifkan kode sebelumnya, tanpa memutus akses yang sudah terhubung. Simpan kode saat dibuat karena kode hanya ditampilkan sekali.',
             style: StudentDetailStyle.body,
           ),
-          for (final invitation in data.invitations)
+          for (final invitation in data.invitations.take(1))
             ReferralInvitationTile(
               key: ValueKey(invitation.id),
               invitation: invitation,

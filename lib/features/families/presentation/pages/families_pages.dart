@@ -12,6 +12,7 @@ import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/nalara_dropdown.dart';
 import '../../../../shared/widgets/nalara_surface_card.dart';
 import '../../../../shared/widgets/page_widgets.dart';
+import '../../../../utils/date_time_utils.dart';
 import '../../../../utils/injector.dart';
 import '../../../../utils/validators.dart';
 import '../../../access/domain/entities/referral_invitation.dart';
@@ -522,89 +523,94 @@ class _FamilyDetailPageState extends State<FamilyDetailPage> {
     load: () => getIt<LoadFamilyOverview>()(widget.id),
     builder: (context, data, reload) => PageBody(
       children: [
+        const SizedBox(height: 6),
         Text(
           data.family.parentName,
-          style: Theme.of(context).textTheme.headlineLarge,
+          style: const TextStyle(
+            fontFamily: 'NalaraInter',
+            fontSize: 30,
+            height: 1.2,
+            fontWeight: FontWeight.w700,
+            color: FamiliesStyle.ink,
+          ),
         ),
-        DetailRow('Nomor HP', data.family.parentPhone),
-        OutlinedButton.icon(
-          onPressed: () async {
+        const SizedBox(height: 14),
+        const Text('Nomor HP', style: FamiliesStyle.body),
+        const SizedBox(height: 5),
+        Text(
+          data.family.parentPhone,
+          style: const TextStyle(
+            fontFamily: 'NalaraInter',
+            fontSize: 16,
+            height: 1.3,
+            color: FamiliesStyle.ink,
+          ),
+        ),
+        const SizedBox(height: 18),
+        _FamilyDetailAction(
+          label: 'Edit Orang Tua & anak',
+          onTap: () async {
             await context.push('/teacher/families/${widget.id}/edit');
-            reload();
+            if (context.mounted) reload();
           },
-          icon: const Icon(Icons.edit_outlined),
-          label: const Text('Edit Orang Tua & anak'),
         ),
-        SectionTitle('${data.family.children.length} anak terdaftar'),
+        const SizedBox(height: 30),
+        _FamilyDetailSectionTitle(
+          '${data.family.children.length} anak terdaftar',
+        ),
+        const SizedBox(height: 12),
         if (data.family.children.isEmpty)
           const EmptyNotice(
             'Hubungkan anak terlebih dahulu melalui Edit Orang Tua & anak atau profil siswa.',
             imagePath: 'assets/Empty/Empty Keluarga.png',
-          ),
-        for (final child in data.family.children)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: NalaraSurfaceCard(
-              key: ValueKey(child.id),
-              onTap: () async {
-                await context.push('/teacher/students/${child.id}');
-                reload();
-              },
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE7EFE5),
-                      shape: BoxShape.circle,
+          )
+        else
+          NalaraSurfaceCard(
+            key: const ValueKey('family-children-group'),
+            radius: 20,
+            padding: EdgeInsets.zero,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (
+                  var index = 0;
+                  index < data.family.children.length;
+                  index++
+                ) ...[
+                  if (index > 0)
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 74,
+                      endIndent: 16,
+                      color: FamiliesStyle.line,
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      child.name.isEmpty ? '?' : child.name[0].toUpperCase(),
-                      style: const TextStyle(
-                        fontFamily: 'NalaraLora',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF155A49),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          child.name,
-                          style: const TextStyle(
-                            fontFamily: 'NalaraInter',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1E292D),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${child.grade} · ${statusLabel(child.status)}',
-                          style: FamiliesStyle.body,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Color(0xFF1E292D),
-                    size: 24,
+                  _FamilyChildRow(
+                    key: ValueKey(data.family.children[index].id),
+                    child: data.family.children[index],
+                    onTap: () async {
+                      await context.push(
+                        '/teacher/students/${data.family.children[index].id}',
+                      );
+                      if (context.mounted) reload();
+                    },
                   ),
                 ],
-              ),
+              ],
             ),
           ),
-        const SectionTitle('Kode referral Orang Tua'),
+        const SizedBox(height: 28),
+        const _FamilyDetailSectionTitle('Kode referral Orang Tua'),
+        const SizedBox(height: 10),
         const Text(
-          'Satu kode berlaku untuk seluruh anak aktif dalam keluarga ini. Anak yang ditambahkan kemudian otomatis ikut terhubung. Kode baru menggantikan kode lama yang belum dipakai, bukan mencabut sesi yang sudah aktif.',
+          'Satu kode dapat digunakan kembali tanpa batas waktu untuk seluruh anak aktif dalam keluarga ini. Anak yang ditambahkan kemudian otomatis ikut terhubung. Kode baru menonaktifkan kode sebelumnya, tanpa memutus akses yang sudah terhubung. Simpan kode saat dibuat.',
+          style: TextStyle(
+            fontFamily: 'NalaraInter',
+            fontSize: 13.5,
+            height: 1.5,
+            color: FamiliesStyle.muted,
+          ),
         ),
         const SizedBox(height: 16),
         SubmitButton(
@@ -627,8 +633,8 @@ class _FamilyDetailPageState extends State<FamilyDetailPage> {
             }
           },
         ),
-        for (final invitation in data.invitations)
-          ReferralInvitationTile(
+        for (final invitation in data.invitations.take(1))
+          _FamilyInvitationCard(
             key: ValueKey(invitation.id),
             invitation: invitation,
             onRevoke: () async {
@@ -644,14 +650,16 @@ class _FamilyDetailPageState extends State<FamilyDetailPage> {
                   invitation.id,
                 ),
               );
-              if (ok) reload();
+              if (ok && context.mounted) reload();
             },
           ),
-        const SizedBox(height: 24),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.no_accounts_outlined),
-          label: const Text('Cabut seluruh akses Orang Tua'),
-          onPressed: () async {
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Divider(height: 1, color: FamiliesStyle.line),
+        ),
+        _FamilyDetailAction(
+          label: 'Cabut seluruh akses Orang Tua',
+          onTap: () async {
             if (!await confirmAction(
               context,
               'Cabut akses Orang Tua pada seluruh perangkat serta semua kode keluarga ini? Anak tidak dihapus. Untuk masuk kembali diperlukan kode baru.',
@@ -667,7 +675,220 @@ class _FamilyDetailPageState extends State<FamilyDetailPage> {
             }
           },
         ),
+        const SizedBox(height: 18),
       ],
     ),
   );
+}
+
+class _FamilyDetailSectionTitle extends StatelessWidget {
+  final String title;
+
+  const _FamilyDetailSectionTitle(this.title);
+
+  @override
+  Widget build(BuildContext context) => Text(
+    title,
+    style: const TextStyle(
+      fontFamily: 'NalaraInter',
+      fontSize: 22,
+      height: 1.3,
+      fontWeight: FontWeight.w700,
+      color: FamiliesStyle.ink,
+    ),
+  );
+}
+
+class _FamilyDetailAction extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _FamilyDetailAction({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: FamiliesStyle.line),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 64),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 13, 14, 13),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontFamily: 'NalaraInter',
+                      fontSize: 15,
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
+                      color: FamiliesStyle.green,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: FamiliesStyle.ink,
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _FamilyChildRow extends StatelessWidget {
+  final FamilyChild child;
+  final VoidCallback onTap;
+
+  const _FamilyChildRow({super.key, required this.child, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: FamiliesStyle.sage,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              child.name.isEmpty ? '?' : child.name[0].toUpperCase(),
+              style: const TextStyle(
+                fontFamily: 'NalaraLora',
+                fontSize: 21,
+                fontWeight: FontWeight.w600,
+                color: FamiliesStyle.green,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  child.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'NalaraInter',
+                    fontSize: 15,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                    color: FamiliesStyle.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${child.grade} · ${statusLabel(child.status)}',
+                  style: const TextStyle(
+                    fontFamily: 'NalaraInter',
+                    fontSize: 13.5,
+                    height: 1.4,
+                    color: FamiliesStyle.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: FamiliesStyle.ink,
+            size: 24,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _FamilyInvitationCard extends StatelessWidget {
+  final ReferralInvitation invitation;
+  final VoidCallback onRevoke;
+
+  const _FamilyInvitationCard({
+    super.key,
+    required this.invitation,
+    required this.onRevoke,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final lastUsed = invitation.lastUsedAt ?? invitation.redeemedAt;
+    final status = invitation.revokedAt != null
+        ? 'Dicabut'
+        : lastUsed != null
+        ? 'Aktif · Terakhir digunakan ${DateTimeUtils.date(lastUsed)}'
+        : 'Aktif · Belum digunakan';
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: NalaraSurfaceCard(
+        radius: 20,
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    invitation.expiresAt == null
+                        ? 'Berlaku tanpa batas waktu'
+                        : 'Berlaku sampai ${DateTimeUtils.date(invitation.expiresAt!)}',
+                    style: const TextStyle(
+                      fontFamily: 'NalaraInter',
+                      fontSize: 14,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                      color: FamiliesStyle.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(status, style: FamiliesStyle.body),
+                ],
+              ),
+            ),
+            if (invitation.revokedAt == null)
+              TextButton(
+                onPressed: onRevoke,
+                style: TextButton.styleFrom(
+                  foregroundColor: FamiliesStyle.green,
+                  backgroundColor: FamiliesStyle.sage,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 9,
+                  ),
+                  shape: const StadiumBorder(),
+                  textStyle: const TextStyle(
+                    fontFamily: 'NalaraInter',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                child: const Text('Cabut kode'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

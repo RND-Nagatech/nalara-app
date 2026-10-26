@@ -7,6 +7,16 @@ abstract final class LearningPlansStyle {
       muted = Color(0xFF6F7477),
       lightGreen = Color(0xFFE2F2E8);
   static const emptyArtwork = 'assets/Empty/Empty target.png';
+  static const listRadius = 18.0;
+  static const listAvatarSize = 44.0;
+  static const listAvatarGap = 12.0;
+  static const listRowPadding = EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 14,
+  );
+  static const listDividerInset = 16 + listAvatarSize + listAvatarGap;
+  static const listDivider = Color(0xFFB7D8CA);
+  static const listProgressTrack = Color(0xFFE7EFEA);
   static const title = TextStyle(
     fontFamily: 'NalaraInter',
     fontSize: 25,

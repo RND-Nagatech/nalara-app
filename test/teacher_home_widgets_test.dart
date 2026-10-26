@@ -108,6 +108,7 @@ void main() {
         '/teacher/students',
         '/teacher/sessions/a',
         '/teacher/schedule/new',
+        '/teacher/getting-started',
       ])
         GoRoute(
           path: path,
@@ -259,6 +260,13 @@ void main() {
       },
     );
   }
+  testWidgets('Home does not contain a teaching-guide card', (tester) async {
+    viewport(tester);
+    await routed(tester);
+    expect(find.byKey(const ValueKey('teaching-guide-card')), findsNothing);
+    expect(find.byKey(const ValueKey('teaching-guide-open')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'initial loading shows no fabricated zero counts, names or lessons',
     (tester) async {

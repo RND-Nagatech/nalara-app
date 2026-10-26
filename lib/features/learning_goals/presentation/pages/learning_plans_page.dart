@@ -8,11 +8,12 @@ import '../../../../shared/state/teaching_catalog_refresh.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
 import '../../../../shared/widgets/nalara_error_notice.dart';
 import '../../../../utils/injector.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
 import '../../domain/entities/learning_goal.dart';
 import '../../domain/repositories/learning_repository.dart';
 import '../../domain/usecases/update_progress.dart';
 import '../bloc/learning_plans_cubit.dart';
-import '../widgets/learning_plan_card.dart';
+import '../widgets/learning_plans_grouped_list.dart';
 import '../widgets/learning_plans_empty_state.dart';
 import '../widgets/learning_plans_style.dart';
 
@@ -111,14 +112,17 @@ class _LearningPlansPageState extends State<LearningPlansPage>
           backgroundColor: LearningPlansStyle.cream,
           floatingActionButton:
               !widget.readOnly && state.result?.items.isNotEmpty == true
-              ? FloatingActionButton.extended(
-                  key: const ValueKey('target-add-list'),
-                  heroTag: 'target-add-list',
-                  onPressed: _add,
-                  backgroundColor: LearningPlansStyle.green,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tambah'),
+              ? TutorialTarget(
+                  id: 'add-target',
+                  child: FloatingActionButton.extended(
+                    key: const ValueKey('target-add-list'),
+                    heroTag: 'target-add-list',
+                    onPressed: _add,
+                    backgroundColor: LearningPlansStyle.green,
+                    foregroundColor: Colors.white,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah'),
+                  ),
                 )
               : null,
           body: SafeArea(
@@ -247,19 +251,11 @@ class _LearningPlansPageState extends State<LearningPlansPage>
 
   Widget _plans(PageResult<LearningPlan> result) => SliverPadding(
     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-    sliver: SliverList.builder(
-      itemCount: result.items.length,
-      itemBuilder: (context, index) {
-        final plan = result.items[index];
-        return LearningPlanCard(
-          key: ValueKey(plan.id),
-          plan: plan,
-          progressLabel: PlanProgressLabel()(plan),
-          onTap: () => _open(
-            '${widget.routePrefix}/plans/${Uri.encodeComponent(plan.id)}',
-          ),
-        );
-      },
+    sliver: LearningPlansGroupedList(
+      plans: result.items,
+      progressLabel: (plan) => PlanProgressLabel()(plan),
+      onOpen: (plan) =>
+          _open('${widget.routePrefix}/plans/${Uri.encodeComponent(plan.id)}'),
     ),
   );
 

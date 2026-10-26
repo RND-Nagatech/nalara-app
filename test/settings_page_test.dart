@@ -1,11 +1,60 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nalara/features/profile/presentation/pages/more_pages.dart';
 import 'package:nalara/features/profile/presentation/widgets/settings_style.dart';
 import 'package:nalara/utils/app_theme.dart';
+import 'package:nalara/features/auth/domain/entities/teacher.dart';
+import 'package:nalara/features/auth/domain/repositories/auth_repository.dart';
+import 'package:nalara/features/auth/presentation/bloc/auth_cubit.dart';
+import 'package:nalara/features/profile/domain/teacher_profile_repository.dart';
+import 'package:nalara/shared/widgets/nalara_dropdown.dart';
+import 'package:nalara/shared/errors/app_failure.dart';
+import 'package:nalara/utils/injector.dart';
+
+class _SettingsAuth extends Fake implements AuthRepository {
+  @override
+  Future<Teacher> login(
+    String identifier,
+    String password, {
+    bool rememberMe = true,
+    LoginMethod method = LoginMethod.email,
+  }) async => const Teacher(
+    id: 'teacher',
+    name: 'Guru',
+    email: 'guru@example.test',
+    workspaceId: 'workspace',
+    timezone: 'Asia/Jakarta',
+  );
+  @override
+  Future<void> completeOnboarding() async {}
+}
+
+class _SettingsProfile implements TeacherProfileRepository {
+  int saves = 0;
+  Completer<String>? pending;
+  Object? error;
+  @override
+  Future<String> updatePhone(String phone) async => phone;
+  @override
+  Future<String> updateTimezone(String timezone) async {
+    saves++;
+    if (error != null) throw error!;
+    return pending?.future ?? timezone;
+  }
+}
 
 void main() {
+  late _SettingsProfile profile;
+  setUp(() async {
+    final auth = AuthCubit(_SettingsAuth());
+    getIt.registerSingleton<AuthCubit>(auth, dispose: (cubit) => cubit.close());
+    profile = _SettingsProfile();
+    getIt.registerFactory<TeacherProfileRepository>(() => profile);
+    await auth.login('guru@example.test', 'password');
+  });
+  tearDown(() => getIt.reset());
   Finder key(String id) => find.byKey(ValueKey('settings-$id'));
 
   void viewport(WidgetTester tester, [Size size = const Size(430, 1000)]) {
@@ -64,19 +113,20 @@ void main() {
   );
 
   testWidgets(
-    'existing language, default time and privacy remain read-only without fake controls',
+    'language/privacy stay read-only and timezone uses the shared selector with an explicit save',
     (tester) async {
       viewport(tester);
       await render(tester);
       expect(find.text('Bahasa Indonesia'), findsOneWidget);
-      expect(find.text('WIB · Asia/Jakarta'), findsOneWidget);
+      expect(find.text('WIB · Jakarta (UTC+7)'), findsOneWidget);
       expect(
         find.text(
           'Catatan internal hanya untuk Guru. Pilih visibilitas saat menyimpan progress atau laporan.',
         ),
         findsOneWidget,
       );
-      expect(find.byType(SettingsInfoRow), findsNWidgets(2));
+      expect(find.byType(SettingsInfoRow), findsOneWidget);
+      expect(find.byType(NalaraDropdown<String>), findsOneWidget);
       expect(find.byType(Switch), findsNothing);
       expect(find.byType(Checkbox), findsNothing);
       expect(find.byType(TextField), findsNothing);
@@ -88,8 +138,127 @@ void main() {
         tester.getRect(key('privacy')).top,
         lessThan(tester.getRect(key('help')).top),
       );
-      expect(find.textContaining('Simpan'), findsNothing);
+      expect(
+        tester.widget<FilledButton>(key('timezone-save')).onPressed,
+        isNull,
+      );
       expect(find.textContaining('24/7'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'confirmed timezone save updates the account, not just the selected label',
+    (tester) async {
+      viewport(tester);
+      await render(tester);
+      tester.widget<NalaraDropdown<String>>(key('timezone')).onChanged!(
+        'Asia/Makassar',
+      );
+      await tester.pump();
+      expect(getIt<AuthCubit>().state.teacher!.timezone, 'Asia/Jakarta');
+      await tap(tester, key('timezone-save'));
+      expect(getIt<AuthCubit>().state.teacher!.timezone, 'Asia/Makassar');
+      expect(find.text('WITA · Makassar (UTC+8)'), findsOneWidget);
+      expect(
+        tester.widget<FilledButton>(key('timezone-save')).onPressed,
+        isNull,
+      );
+      expect(find.text('Zona waktu berhasil disimpan.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'save shows an in-button spinner, locks actions and notifies only after confirmation',
+    (tester) async {
+      viewport(tester);
+      profile.pending = Completer<String>();
+      await render(tester);
+      tester.widget<NalaraDropdown<String>>(key('timezone')).onChanged!(
+        'Asia/Jayapura',
+      );
+      await tester.pump();
+      await tester.ensureVisible(key('timezone-save'));
+      await tester.tap(key('timezone-save'));
+      await tester.pump();
+      expect(
+        find.descendant(
+          of: key('timezone-save'),
+          matching: key('timezone-saving'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Menyimpan…'), findsOneWidget);
+      expect(
+        tester.widget<FilledButton>(key('timezone-save')).onPressed,
+        isNull,
+      );
+      expect(
+        tester.widget<NalaraDropdown<String>>(key('timezone')).enabled,
+        isFalse,
+      );
+      expect(find.text('Zona waktu berhasil disimpan.'), findsNothing);
+      expect(getIt<AuthCubit>().state.teacher!.timezone, 'Asia/Jakarta');
+      expect(profile.saves, 1);
+      profile.pending!.complete('Asia/Jayapura');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(key('timezone-saving'), findsNothing);
+      expect(find.text('Zona waktu berhasil disimpan.'), findsOneWidget);
+      expect(getIt<AuthCubit>().state.teacher!.timezone, 'Asia/Jayapura');
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text('Zona waktu berhasil disimpan.'), findsNothing);
+    },
+  );
+
+  testWidgets('failed save keeps the draft and shows no success notification', (
+    tester,
+  ) async {
+    viewport(tester);
+    profile.error = const AppFailure('Server tidak terhubung');
+    await render(tester);
+    tester.widget<NalaraDropdown<String>>(key('timezone')).onChanged!(
+      'Asia/Makassar',
+    );
+    await tester.pump();
+    await tap(tester, key('timezone-save'));
+    expect(key('timezone-saving'), findsNothing);
+    expect(find.text('Zona waktu berhasil disimpan.'), findsNothing);
+    expect(find.text('Server tidak terhubung'), findsOneWidget);
+    expect(
+      tester.widget<NalaraDropdown<String>>(key('timezone')).value,
+      'Asia/Makassar',
+    );
+    expect(
+      tester.widget<FilledButton>(key('timezone-save')).onPressed,
+      isNotNull,
+    );
+    expect(getIt<AuthCubit>().state.teacher!.timezone, 'Asia/Jakarta');
+  });
+
+  testWidgets(
+    'closing the editor suppresses a delayed success notice without losing the confirmed account update',
+    (tester) async {
+      viewport(tester);
+      profile.pending = Completer<String>();
+      await render(tester);
+      tester.widget<NalaraDropdown<String>>(key('timezone')).onChanged!(
+        'Asia/Makassar',
+      );
+      await tester.pump();
+      await tester.ensureVisible(key('timezone-save'));
+      await tester.tap(key('timezone-save'));
+      await tester.pump();
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: Text('Halaman lain'))),
+      );
+      profile.pending!.complete('Asia/Makassar');
+      await tester.pumpAndSettle();
+      expect(find.text('Zona waktu berhasil disimpan.'), findsNothing);
+      expect(getIt<AuthCubit>().state.teacher!.timezone, 'Asia/Makassar');
+      expect(tester.takeException(), isNull);
     },
   );
 

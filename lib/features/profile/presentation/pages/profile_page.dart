@@ -7,6 +7,9 @@ import '../../../../shared/state/load_cubit.dart';
 import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/page_widgets.dart';
 import '../../../../shared/widgets/nalara_surface_card.dart';
+import '../../../../shared/widgets/teacher_bottom_navigation.dart';
+import '../../../../shared/widgets/parent_bottom_navigation.dart';
+import '../../../../shared/widgets/student_bottom_navigation.dart';
 import '../../../../utils/injector.dart';
 import '../../../auth/domain/entities/teacher.dart';
 import '../../../access/domain/entities/access_profile.dart';
@@ -15,9 +18,15 @@ import '../widgets/more_menu_tile.dart';
 import '../widgets/profile_account_card.dart';
 import '../widgets/profile_style.dart';
 import '../widgets/teacher_profile_card.dart';
+import '../widgets/teacher_phone_editor.dart';
+import '../widgets/profile_completion_badge.dart';
 import '../../../subscription/presentation/subscription_cubit.dart';
 import '../../../students/domain/entities/student.dart';
 import '../../../students/presentation/widgets/student_profile_card.dart';
+import '../../../avatars/domain/avatar.dart';
+import '../../../avatars/presentation/avatar_picker_sheet.dart';
+import '../../../../shared/domain/teaching_catalog_changes.dart';
+import '../../domain/teacher_profile_repository.dart';
 
 class ProfilePage extends StatefulWidget {
   final Future<Student> Function()? loadStudent;
@@ -38,6 +47,8 @@ class _ProfilePageState extends State<ProfilePage> {
   late final _auth = getIt<AuthCubit>();
   final _submit = SubmitCubit();
   bool _confirmingLogout = false;
+  bool _editingAvatar = false;
+  bool _editingPhone = false;
   LoadCubit<Student>? _student;
   bool get _portal => widget.parent || widget.loadStudent != null;
 
@@ -95,6 +106,41 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _editAvatar(String name, String? current) async {
+    if (_editingAvatar || _editingPhone || widget.parent) return;
+    final session = _auth.state;
+    final student = widget.loadStudent != null;
+    if (student
+        ? session.accessProfile?.role.name != 'student'
+        : session.teacher == null) {
+      return;
+    }
+    setState(() => _editingAvatar = true);
+    try {
+      final result = await showAvatarPicker(
+        context,
+        repository: getIt<AvatarsRepository>(param1: student),
+        name: name,
+        current: current,
+      );
+      if (!mounted || result == null || !identical(_auth.state, session)) {
+        return;
+      }
+      if (student) {
+        await _student?.load();
+      } else {
+        _auth.updateOwnAvatar(session.teacher!, result.avatarId);
+      }
+      if (!mounted || (student && !identical(_auth.state, session))) return;
+      if (getIt.isRegistered<TeachingCatalogChanges>()) {
+        getIt<TeachingCatalogChanges>().notifyChanged();
+      }
+      successMessage(context, 'Foto profil disimpan');
+    } finally {
+      if (mounted) setState(() => _editingAvatar = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
     value: SystemUiOverlayStyle.dark.copyWith(
@@ -142,6 +188,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
         ),
+        bottomNavigationBar: _bottomNavigation(),
       ),
     ),
   );
@@ -163,24 +210,86 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(width: 14),
         Expanded(
-          child: Text(
-            widget.parent
-                ? 'Profil Orang Tua'
-                : _portal
-                ? 'Profil saya'
-                : 'Profil Guru',
-            style: const TextStyle(
-              fontFamily: 'NalaraInter',
-              fontSize: 17,
-              height: 1.4,
-              fontWeight: FontWeight.w700,
-              color: ProfileStyle.ink,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.parent
+                    ? 'Profil Orang Tua'
+                    : _portal
+                    ? 'Profil saya'
+                    : 'Profil Guru',
+                style: const TextStyle(
+                  fontFamily: 'NalaraInter',
+                  fontSize: 17,
+                  height: 1.4,
+                  fontWeight: FontWeight.w700,
+                  color: ProfileStyle.ink,
+                ),
+              ),
+              if (!_portal) _completionHint(),
+            ],
           ),
         ),
+        if (!_portal) const ProfileCompletionBadge(),
       ],
     ),
   );
+
+  Widget _completionHint() => BlocBuilder<AuthCubit, AuthState>(
+    bloc: _auth,
+    builder: (context, state) {
+      final teacher = state.status == AuthStatus.authenticated
+          ? state.teacher
+          : null;
+      if (teacher == null || teacher.incompleteProfileCount == 0) {
+        return const SizedBox.shrink();
+      }
+      final message = teacher.missingAvatar
+          ? teacher.missingPhone
+                ? 'Foto profil dan nomor HP belum diisi'
+                : 'Foto profil belum diisi'
+          : 'Nomor HP belum diisi';
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Semantics(
+          liveRegion: true,
+          child: Text(
+            message,
+            key: const ValueKey('profile-completion-hint'),
+            style: ProfileStyle.body.copyWith(
+              fontSize: 12,
+              height: 1.4,
+              color: ProfileStyle.danger,
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  Widget _bottomNavigation() {
+    if (!_portal) {
+      return TeacherBottomNavigation(
+        selectedIndex: 4,
+        onDestinationSelected: (index) =>
+            context.go(teacherNavigationLocations[index]),
+      );
+    }
+    if (widget.parent) {
+      return ParentBottomNavigation(
+        selectedIndex: 4,
+        onDestinationSelected: (index) =>
+            context.go(parentNavigationLocations[index]),
+      );
+    }
+    return StudentBottomNavigation(
+      selectedIndex: 4,
+      onDestinationSelected: (index) =>
+          context.go(studentNavigationLocations[index]),
+    );
+  }
 
   Widget _parentContent(AccessProfile profile) {
     final name = profile.name.trim();
@@ -246,6 +355,18 @@ class _ProfilePageState extends State<ProfilePage> {
           style: ProfileStyle.body,
         ),
         const SizedBox(height: 26),
+        MoreMenuTile(
+          key: const ValueKey('parent-profile-open-help'),
+          item: const MoreMenuItem(
+            id: 'parent-help',
+            title: 'Pusat Bantuan',
+            description: 'Panduan penggunaan untuk Orang Tua',
+            route: '/parent/help',
+            icon: Icons.help_outline_rounded,
+          ),
+          onTap: () => context.push('/parent/help'),
+        ),
+        const SizedBox(height: 26),
         _logoutAction(),
       ],
     );
@@ -268,6 +389,9 @@ class _ProfilePageState extends State<ProfilePage> {
               student: state.value!,
               onEdit: null,
               showInternalNotes: false,
+              onEditAvatar: _editingAvatar
+                  ? null
+                  : () => _editAvatar(state.value!.name, state.value!.avatarId),
             ),
             const SizedBox(height: 26),
             _sectionTitle('Akun & bantuan'),
@@ -296,84 +420,113 @@ class _ProfilePageState extends State<ProfilePage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TeacherProfileCard(teacher: teacher),
-        const SizedBox(height: 18),
-        BlocBuilder<SubscriptionCubit, SubscriptionState>(
-          bloc: getIt<SubscriptionCubit>(),
-          builder: (context, state) => Container(
-            decoration: BoxDecoration(
-              color: ProfileStyle.green,
-              borderRadius: BorderRadius.circular(23),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(23),
-              onTap: () {
-                getIt<SubscriptionCubit>().clearPaywall();
-                context.push('/teacher/subscription');
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(23),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Langganan NALARA',
-                      style: TextStyle(
-                        color: Color(0xFFCAE0D2),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+        TeacherProfileCard(
+          teacher: teacher,
+          onEditAvatar: _editingAvatar || _editingPhone
+              ? null
+              : () => _editAvatar(teacher.name, teacher.avatarId),
+        ),
+        if (getIt.isRegistered<SubscriptionCubit>()) ...[
+          const SizedBox(height: 18),
+          BlocBuilder<SubscriptionCubit, SubscriptionState>(
+            bloc: getIt<SubscriptionCubit>(),
+            builder: (context, state) => Container(
+              decoration: BoxDecoration(
+                color: ProfileStyle.green,
+                borderRadius: BorderRadius.circular(23),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(23),
+                onTap: () {
+                  getIt<SubscriptionCubit>().clearPaywall();
+                  context.push('/teacher/subscription');
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(23),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Langganan NALARA',
+                        style: TextStyle(
+                          color: Color(0xFFCAE0D2),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      state.value?.name ?? 'Paket Anda',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(height: 12),
+                      Text(
+                        state.value?.name ?? 'Paket Anda',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 23,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      state.blocked
-                          ? 'Masa akses berakhir. Pilih paket untuk melanjutkan.'
-                          : state.value?.plan == 'trial'
-                          ? 'Sisa ${state.value!.daysRemaining} hari menikmati fitur Pro.'
-                          : 'Kelola paket dan manfaat langganan Anda.',
-                      style: const TextStyle(
-                        color: Color(0xFFD7E5DB),
-                        height: 1.6,
+                      const SizedBox(height: 7),
+                      Text(
+                        state.blocked
+                            ? 'Masa akses berakhir. Pilih paket untuk melanjutkan.'
+                            : state.value?.plan == 'trial'
+                            ? 'Sisa ${state.value!.daysRemaining} hari menikmati fitur Pro.'
+                            : 'Kelola paket dan manfaat langganan Anda.',
+                        style: const TextStyle(
+                          color: Color(0xFFD7E5DB),
+                          height: 1.6,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    const Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Lihat paket & manfaat',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
+                      const SizedBox(height: 18),
+                      const Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Lihat paket & manfaat',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 19,
-                          color: Colors.white,
-                        ),
-                      ],
-                    ),
-                  ],
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 19,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
         const SizedBox(height: 26),
         _sectionTitle('Informasi akun'),
         const SizedBox(height: 12),
-        ProfileAccountCard(teacher: teacher),
+        ProfileAccountCard(
+          teacher: teacher,
+          phoneEditor: getIt.isRegistered<TeacherProfileRepository>()
+              ? TeacherPhoneEditor(
+                  key: ValueKey(
+                    'teacher-phone-${teacher.workspaceId}-${teacher.id}',
+                  ),
+                  teacher: teacher,
+                  enabled: !_editingAvatar,
+                  onEditingChanged: (editing) {
+                    if (mounted) setState(() => _editingPhone = editing);
+                  },
+                  onSaved: (expected, phone) {
+                    if (!identical(_auth.state.teacher, expected)) return;
+                    _auth.updateOwnPhone(expected, phone);
+                    if (getIt.isRegistered<TeachingCatalogChanges>()) {
+                      getIt<TeachingCatalogChanges>().notifyChanged();
+                    }
+                    successMessage(context, 'Nomor HP disimpan');
+                  },
+                )
+              : null,
+        ),
         const SizedBox(height: 26),
         _sectionTitle('Akun & bantuan'),
         const SizedBox(height: 12),

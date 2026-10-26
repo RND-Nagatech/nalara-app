@@ -10,8 +10,6 @@ import '../widgets/home_header.dart';
 import '../widgets/home_hero.dart';
 import '../widgets/home_style.dart';
 import '../widgets/home_dashboard_view.dart';
-import '../../../teaching_guide/presentation/teaching_guide_card.dart';
-import '../../../teaching_guide/presentation/teaching_guide_cubit.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -22,7 +20,6 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage>
     with WidgetsBindingObserver, TeachingCatalogRefresh<DashboardPage> {
   late final DashboardCubit _cubit;
-  late final TeachingGuideCubit _guide;
   GoRouter? _router;
   bool _homeVisible = true;
   @override
@@ -32,7 +29,6 @@ class _DashboardPageState extends State<DashboardPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _cubit = getIt<DashboardCubit>()..load();
-    _guide = getIt<TeachingGuideCubit>()..load();
   }
 
   @override
@@ -50,7 +46,9 @@ class _DashboardPageState extends State<DashboardPage>
     final visible = _router?.state.uri.path == '/teacher/home';
     final returning = visible && !_homeVisible;
     _homeVisible = visible;
-    if (returning && mounted) _refresh();
+    if (returning && mounted) {
+      _refresh();
+    }
   }
 
   @override
@@ -59,7 +57,7 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Future<void> _refresh() async {
-    await Future.wait([_cubit.load(), _guide.load()]);
+    await _cubit.load();
   }
 
   @override
@@ -67,7 +65,6 @@ class _DashboardPageState extends State<DashboardPage>
     _router?.routerDelegate.removeListener(_routeChanged);
     WidgetsBinding.instance.removeObserver(this);
     _cubit.close();
-    _guide.close();
     super.dispose();
   }
 
@@ -97,12 +94,6 @@ class _DashboardPageState extends State<DashboardPage>
                     onReports: () => context.push('/teacher/reports'),
                   ),
             sessions: home?.previewSessions,
-            beforeSchedule: TeachingGuideCard(
-              cubit: _guide,
-              inHome: true,
-              onOpen: (route) => context.push(route),
-              onOpenGuide: () => context.push('/teacher/getting-started'),
-            ),
             timezone: data?.teacher.timezone ?? '',
             loading: state.status == LoadStatus.loading,
             error: state.error,

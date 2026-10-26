@@ -11,12 +11,15 @@ import 'package:nalara/features/students/domain/repositories/students_repository
 import 'package:nalara/features/students/domain/usecases/load_student_overview.dart';
 import 'package:nalara/features/students/presentation/pages/students_pages.dart';
 import 'package:nalara/features/students/presentation/widgets/student_detail_style.dart';
+import 'package:nalara/features/access/presentation/widgets/referral_invitation_widgets.dart';
 import 'package:nalara/shared/errors/app_failure.dart';
 import 'package:nalara/utils/app_theme.dart';
 import 'package:nalara/utils/injector.dart';
 import 'learning_plans_fixtures.dart';
 import 'schedule_fixtures.dart';
 import 'student_detail_fixtures.dart';
+import 'tuition_fixtures.dart';
+import 'package:nalara/features/tuition_fees/domain/tuition_repository.dart';
 
 void main() {
   late DetailFixtures fixtures;
@@ -29,6 +32,7 @@ void main() {
     getIt.registerSingleton<StudentsRepository>(fixtures.students);
     getIt.registerSingleton<LoadStudentOverview>(fixtures.load);
     getIt.registerSingleton(PlanProgressLabel());
+    getIt.registerSingleton<TuitionRepository>(TuitionFake());
   });
   tearDown(() => getIt.reset());
   void viewport(WidgetTester tester, [Size size = const Size(430, 1000)]) {
@@ -44,6 +48,7 @@ void main() {
     String id = 's1',
     double scale = 1,
     bool settle = true,
+    String? initialTab,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -55,7 +60,7 @@ void main() {
           ),
           child: child!,
         ),
-        home: StudentDetailPage(id: id),
+        home: StudentDetailPage(id: id, initialTab: initialTab),
       ),
     );
     if (settle) await tester.pumpAndSettle();
@@ -66,6 +71,18 @@ void main() {
     await tester.tap(finder);
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'tuition notification opens the fee tab without marking a payment',
+    (tester) async {
+      viewport(tester);
+      await render(tester, initialTab: 'tuition');
+      final tabs = tester.widget<TabBar>(find.byType(TabBar));
+      expect(tabs.controller!.index, 5);
+      expect(find.text('Tandai lunas'), findsNothing);
+      expect(find.text('Atur biaya bimbel'), findsOneWidget);
+    },
+  );
 
   Future<void> drainNotice(WidgetTester tester) async {
     await tester.pump(const Duration(seconds: 3));
@@ -146,7 +163,7 @@ void main() {
   );
 
   testWidgets(
-    'preserved profile, six tabs, canonical summary and no duplicate student information',
+    'preserved profile, seven tabs, canonical summary and no duplicate student information',
     (tester) async {
       viewport(tester);
       await render(tester);
@@ -173,13 +190,13 @@ void main() {
       expect(tester.widget<Text>(key('weekly-progress')).data, '60%');
       expect(find.text('3 dari 5 target selesai'), findsOneWidget);
       expect(key('progress-chart'), findsOneWidget);
-      expect(find.byType(Tab), findsNWidgets(6));
+      expect(find.byType(Tab), findsNWidgets(7));
       for (final entry in [
         (index: 1, id: 'plans-card'),
         (index: 2, id: 'sessions-card'),
         (index: 3, id: 'reports-card'),
         (index: 4, id: 'family-card'),
-        (index: 5, id: 'referral-card'),
+        (index: 6, id: 'referral-card'),
       ]) {
         await selectTab(tester, entry.index);
         expect(key(entry.id), findsOneWidget);
@@ -345,12 +362,38 @@ void main() {
   );
 
   testWidgets(
+    'referral replaces one latest card and a previously used code stays revocable',
+    (tester) async {
+      viewport(tester);
+      fixtures.students.codes = [
+        ParentInvitation(id: 'latest', lastUsedAt: DateTime.utc(2026, 10, 19)),
+        ParentInvitation(id: 'old', revokedAt: DateTime.utc(2026, 10, 18)),
+      ];
+      await render(tester);
+      await selectTab(tester, 6);
+      expect(find.byType(ReferralInvitationTile), findsOneWidget);
+      expect(find.byKey(const ValueKey('latest')), findsOneWidget);
+      expect(find.byKey(const ValueKey('old')), findsNothing);
+      expect(find.text('Berlaku tanpa batas waktu'), findsOneWidget);
+      expect(find.text('Cabut kode'), findsOneWidget);
+      for (var index = 0; index < 2; index++) {
+        await tap(tester, key('create-code'));
+        await tap(tester, find.text('Tutup'));
+        expect(find.byType(ReferralInvitationTile), findsOneWidget);
+        expect(find.byKey(const ValueKey('latest')), findsNothing);
+        expect(find.byKey(const ValueKey('code')), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'referral creation displays only the newly returned code; revocation keeps confirmation',
     (tester) async {
       viewport(tester);
       await render(tester);
       expect(find.text('NL-TEST-STUDENT'), findsNothing);
-      await selectTab(tester, 5);
+      await selectTab(tester, 6);
       await tap(tester, key('create-code'));
       expect(fixtures.students.requests, contains('invite:s1'));
       expect(find.text('NL-TEST-STUDENT'), findsOneWidget);
@@ -371,7 +414,7 @@ void main() {
     (tester) async {
       viewport(tester);
       await render(tester);
-      await selectTab(tester, 5);
+      await selectTab(tester, 6);
       await tap(tester, key('revoke-access'));
       expect(fixtures.students.requests, isNot(contains('revoke-access:s1')));
       await tap(tester, find.text('Lanjutkan'));
@@ -385,7 +428,7 @@ void main() {
       expect(key('create-code'), findsNothing);
       expect(key('create-plan'), findsNothing);
       expect(key('archive'), findsNothing);
-      await selectTab(tester, 5);
+      await selectTab(tester, 6);
       expect(key('create-code'), findsNothing);
       expect(key('revoke-access'), findsOneWidget);
     },
@@ -399,7 +442,7 @@ void main() {
         'Kode referral belum dapat dibuat. Silakan coba kembali.',
       );
       await render(tester);
-      await selectTab(tester, 5);
+      await selectTab(tester, 6);
       await tap(tester, key('create-code'));
       await drainNotice(tester);
       expect(
@@ -420,7 +463,7 @@ void main() {
         notes: 'Catatan belajar yang panjang. ' * 16,
       );
       await render(tester, scale: 2);
-      await selectTab(tester, 5);
+      await selectTab(tester, 6);
       await tester.ensureVisible(key('revoke-access'));
       await tester.pumpAndSettle();
       expect(key('revoke-access').hitTestable(), findsOneWidget);
@@ -463,7 +506,7 @@ void main() {
       final pending = Completer<ParentInvitation>();
       fixtures.students.respondInvite = () => pending.future;
       await render(tester);
-      await selectTab(tester, 5);
+      await selectTab(tester, 6);
       await tester.ensureVisible(key('create-code'));
       await tester.tap(key('create-code'));
       await tester.pump();
@@ -497,7 +540,7 @@ void main() {
       final pending = Completer<ParentInvitation>();
       fixtures.students.respondInvite = () => pending.future;
       await render(tester);
-      await selectTab(tester, 5);
+      await selectTab(tester, 6);
       await tester.ensureVisible(key('create-code'));
       await tester.tap(key('create-code'));
       await tester.pump();
@@ -527,7 +570,7 @@ void main() {
       final pending = Completer<ParentInvitation>();
       fixtures.students.respondInvite = () => pending.future;
       final router = await routed(tester);
-      await selectTab(tester, 5);
+      await selectTab(tester, 6);
       await tester.ensureVisible(key('create-code'));
       await tester.tap(key('create-code'));
       await tester.pump();

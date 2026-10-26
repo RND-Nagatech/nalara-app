@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
 import '../../../../utils/injector.dart';
+import '../../../auth/presentation/bloc/auth_cubit.dart';
+import '../../../../shared/domain/app_timezones.dart';
 import '../../domain/entities/notification.dart';
 import '../../domain/repositories/notifications_repository.dart';
 import '../bloc/notifications_cubit.dart';
@@ -106,54 +108,76 @@ class _NotificationsPageState extends State<NotificationsPage> {
     ),
   );
 
-  Widget _header(BuildContext context, NotificationsState state) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-    child: Row(
-      children: [
-        IconButton(
-          key: const ValueKey('notifications-back'),
-          tooltip: 'Kembali',
-          style: NotificationsStyle.roundButton,
-          onPressed: () => finishForm(context, '${widget.routePrefix}/more'),
-          icon: const Icon(Icons.arrow_back_rounded, size: 24),
-        ),
-        const SizedBox(width: 14),
-        const Expanded(
-          child: Text(
-            'Notifikasi',
-            style: TextStyle(
-              fontFamily: 'NalaraInter',
-              fontSize: 20,
-              height: 1.4,
-              fontWeight: FontWeight.w700,
-              color: NotificationsStyle.ink,
+  Widget _header(
+    BuildContext context,
+    NotificationsState state,
+  ) => LayoutBuilder(
+    builder: (context, constraints) {
+      final compact = constraints.maxWidth < 360;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+        child: Row(
+          children: [
+            IconButton(
+              key: const ValueKey('notifications-back'),
+              tooltip: 'Kembali',
+              style: NotificationsStyle.roundButton,
+              onPressed: () =>
+                  finishForm(context, '${widget.routePrefix}/more'),
+              icon: const Icon(Icons.arrow_back_rounded, size: 24),
             ),
-          ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Text(
+                'Notifikasi',
+                style: TextStyle(
+                  fontFamily: 'NalaraInter',
+                  fontSize: 20,
+                  height: 1.4,
+                  fontWeight: FontWeight.w700,
+                  color: NotificationsStyle.ink,
+                ),
+              ),
+            ),
+            if (state.result?.items.any((item) => !item.read) ?? false)
+              compact
+                  ? IconButton(
+                      key: const ValueKey('notifications-read-all'),
+                      tooltip: 'Tandai semua dibaca',
+                      onPressed: state.canInteract ? _markAllRead : null,
+                      icon: state.markingAll
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.done_all_rounded),
+                    )
+                  : TextButton(
+                      key: const ValueKey('notifications-read-all'),
+                      onPressed: state.canInteract ? _markAllRead : null,
+                      child: state.markingAll
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Tandai semua dibaca'),
+                    ),
+            const SizedBox(width: 8),
+            IconButton(
+              key: const ValueKey('notifications-refresh'),
+              tooltip: 'Muat ulang notifikasi',
+              style: NotificationsStyle.roundButton,
+              onPressed: state.loading || state.busyId != null
+                  ? null
+                  : _cubit.refresh,
+              icon: const Icon(Icons.refresh_rounded, size: 23),
+            ),
+          ],
         ),
-        if (state.result?.items.any((item) => !item.read) ?? false)
-          TextButton(
-            key: const ValueKey('notifications-read-all'),
-            onPressed: state.canInteract ? _markAllRead : null,
-            child: state.markingAll
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Tandai semua dibaca'),
-          ),
-        const SizedBox(width: 8),
-        IconButton(
-          key: const ValueKey('notifications-refresh'),
-          tooltip: 'Muat ulang notifikasi',
-          style: NotificationsStyle.roundButton,
-          onPressed: state.loading || state.busyId != null
-              ? null
-              : _cubit.refresh,
-          icon: const Icon(Icons.refresh_rounded, size: 23),
-        ),
-      ],
-    ),
+      );
+    },
   );
 
   Widget _body(NotificationsState state) => CustomScrollView(
@@ -196,6 +220,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
               return NotificationCard(
                 key: ValueKey('notification-${notification.id}'),
                 notification: notification,
+                timezone:
+                    widget.routePrefix == '/teacher' &&
+                        getIt.isRegistered<AuthCubit>()
+                    ? getIt<AuthCubit>().state.teacher?.timezone ??
+                          AppTimezones.jakarta
+                    : AppTimezones.jakarta,
                 busy: state.busyId == notification.id,
                 error: state.actionErrorId == notification.id
                     ? state.actionError

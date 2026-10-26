@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 abstract final class ApiConstants {
   static const prefix = '/api/v1';
-  static const androidDevBaseUrl = 'http://192.168.100.157:3100$prefix';
+  static const androidDevBaseUrl = 'http://192.168.31.125:3100$prefix';
   static const iosDevBaseUrl = 'http://localhost:3100$prefix';
   static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
 
@@ -36,6 +36,7 @@ abstract final class ApiConstants {
   static const portalMe = '/portal/me';
   static const portalRefresh = '/portal/refresh';
   static const portalLogout = '/portal/logout';
+  static const portalAccountDeletion = '/portal/account';
   static const portalDashboard = '/portal/dashboard';
   static const portalStudents = '/portal/students';
   static const portalSessions = '/portal/sessions';
@@ -50,6 +51,7 @@ abstract final class ApiConstants {
   static const studentPortal = '/portal/student';
   static const studentPortalDashboard = '$studentPortal/dashboard';
   static const studentPortalProfile = '$studentPortal/profile';
+  static const studentPortalAccountDeletion = '$studentPortal/account';
   static const studentPortalSessions = '$studentPortal/sessions';
   static const studentPortalPlans = '$studentPortal/plans';
   static const studentPortalReports = '$studentPortal/reports';
@@ -68,6 +70,13 @@ abstract final class ApiConstants {
   static const accountDeletion = '/account-deletion';
   static const students = '/students';
   static const families = '/families';
+  static const studentGroups = '/student-groups';
+  static String tuitionFee(String studentId) =>
+      '/students/${Uri.encodeComponent(studentId)}/tuition-fee';
+  static String parentTuitionFee(String studentId) =>
+      '/portal${tuitionFee(studentId)}';
+  static String studentGroup(String id) =>
+      '$studentGroups/${Uri.encodeComponent(id)}';
   static const subjects = '/subjects';
   static const schedules = '/schedules';
   static const sessions = '/sessions';
@@ -87,6 +96,7 @@ abstract final class ApiConstants {
       '$subscriptionPayments/$id/cancel';
   static const tutorTools = '/tutor-tools';
   static const assignments = '$tutorTools/assignments';
+  static const assignmentBatch = '$assignments/batch';
   static const reportTemplates = '$tutorTools/templates';
   static const progressAnalytics = '$tutorTools/analytics';
   static const tutorBranding = '$tutorTools/branding';
@@ -122,6 +132,8 @@ abstract final class ApiConstants {
   static String schedule(String id) => '$schedules/$id';
   static String session(String id) => '$sessions/$id';
   static String sessionAttendance(String id) => '${session(id)}/attendance';
+  static String sessionAttendanceBatch(String id) =>
+      '${session(id)}/attendance-batch';
 
   static String learningPlan(String id) => '$learningPlans/$id';
   static String learningPlanTargets(String planId) =>

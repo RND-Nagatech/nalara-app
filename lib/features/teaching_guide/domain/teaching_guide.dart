@@ -1,11 +1,11 @@
 enum TeachingGuideStep { subject, student, schedule, target }
 
 class TeachingGuide {
-  final bool dismissed, hasSubject, hasStudent, hasSchedule, hasTarget;
+  final bool tutorialSeen, hasSubject, hasStudent, hasSchedule, hasTarget;
   final bool parentConnected;
 
   const TeachingGuide({
-    required this.dismissed,
+    required this.tutorialSeen,
     required this.hasSubject,
     required this.hasStudent,
     required this.hasSchedule,
@@ -21,6 +21,12 @@ class TeachingGuide {
   };
 
   int get completedCount => TeachingGuideStep.values.where(completed).length;
+  int get remainingCount => TeachingGuideStep.values.length - completedCount;
+  bool canStart(TeachingGuideStep step) => switch (step) {
+    TeachingGuideStep.subject || TeachingGuideStep.student => true,
+    TeachingGuideStep.schedule ||
+    TeachingGuideStep.target => hasSubject && hasStudent,
+  };
   bool get isComplete => completedCount == TeachingGuideStep.values.length;
   TeachingGuideStep? get nextStep {
     for (final step in TeachingGuideStep.values) {
@@ -29,8 +35,8 @@ class TeachingGuide {
     return null;
   }
 
-  TeachingGuide withDismissed(bool value) => TeachingGuide(
-    dismissed: value,
+  TeachingGuide withTutorialSeen(bool value) => TeachingGuide(
+    tutorialSeen: value,
     hasSubject: hasSubject,
     hasStudent: hasStudent,
     hasSchedule: hasSchedule,
@@ -41,5 +47,5 @@ class TeachingGuide {
 
 abstract interface class TeachingGuideRepository {
   Future<TeachingGuide> get();
-  Future<bool> setDismissed(bool dismissed);
+  Future<bool> acknowledgeTutorial();
 }

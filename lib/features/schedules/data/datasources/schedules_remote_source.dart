@@ -12,15 +12,36 @@ class SchedulesRemoteSource {
       api.get(ApiConstants.schedule(id));
   Future<Map<String, dynamic>> create(Map<String, dynamic> data) =>
       api.post(ApiConstants.schedules, data);
+  Future<Map<String, dynamic>> changeRepeat(
+    String id,
+    Map<String, dynamic> data,
+  ) => api.post('${ApiConstants.schedule(id)}/repeat', data);
   Future<void> updateSession(String id, Map<String, dynamic> data) async {
     await api.patch(ApiConstants.session(id), data);
   }
 
-  Future<void> cancelSeries(String id) async {
-    await api.patch(ApiConstants.schedule(id), {'status': 'cancelled'});
+  Future<Map<String, dynamic>> changeFollowing(
+    String id,
+    Map<String, dynamic> data,
+  ) => api.patch(ApiConstants.session(id), data);
+
+  Future<void> cancelSeries(String id, String reason) async {
+    await api.patch(ApiConstants.schedule(id), {
+      'status': 'cancelled',
+      'cancellationReason': reason,
+    });
   }
 
   Future<void> attendance(String id, String status) async {
     await api.patch(ApiConstants.sessionAttendance(id), {'attendance': status});
+  }
+
+  Future<void> attendanceBatch(
+    String id,
+    List<Map<String, String>> entries,
+  ) async {
+    await api.patch(ApiConstants.sessionAttendanceBatch(id), {
+      'entries': entries,
+    });
   }
 }

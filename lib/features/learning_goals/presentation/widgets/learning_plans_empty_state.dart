@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'learning_plans_style.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
 
 class LearningPlansEmptyState extends StatelessWidget {
   final VoidCallback onAdd;
@@ -55,37 +56,40 @@ class LearningPlansEmptyState extends StatelessWidget {
           const SizedBox(height: 18),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 280),
-            child: FilledButton(
-              key: const ValueKey('target-add-empty'),
-              onPressed: onAdd,
-              style: FilledButton.styleFrom(
-                backgroundColor: LearningPlansStyle.green,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(192, 46),
-                shape: const StadiumBorder(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 26,
-                  vertical: 12,
+            child: TutorialTarget(
+              id: 'add-target',
+              child: FilledButton(
+                key: const ValueKey('target-add-empty'),
+                onPressed: onAdd,
+                style: FilledButton.styleFrom(
+                  backgroundColor: LearningPlansStyle.green,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(192, 46),
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 26,
+                    vertical: 12,
+                  ),
                 ),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add_circle, size: 23),
-                  SizedBox(width: 12),
-                  Flexible(
-                    child: Text(
-                      'Tambah sekarang',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'NalaraInter',
-                        fontSize: 14,
-                        height: 1.3,
-                        fontWeight: FontWeight.w600,
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_circle, size: 23),
+                    SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        'Tambah sekarang',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'NalaraInter',
+                          fontSize: 14,
+                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

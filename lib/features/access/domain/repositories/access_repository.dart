@@ -7,5 +7,6 @@ abstract class AccessRepository {
   Future<void> saveRole(AppRole? role);
   Future<AccessProfile?> restore();
   Future<AccessProfile> redeem(String code, AppRole role);
+  Future<void> deleteAccount(AppRole role);
   Future<void> logout();
 }

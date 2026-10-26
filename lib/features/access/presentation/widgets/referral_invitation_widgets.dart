@@ -48,7 +48,7 @@ Future<void> showReferralCode(
         ),
         const SizedBox(height: 14),
         Text(
-          'Berlaku sampai ${DateTimeUtils.date(invitation.expiresAt)}. Hanya dapat digunakan sekali. Simpan atau salin sekarang; kode tidak ditampilkan lagi.',
+          '${invitation.expiresAt == null ? 'Kode dapat digunakan kembali tanpa batas waktu sampai Guru mengganti atau mencabutnya.' : 'Berlaku sampai ${DateTimeUtils.date(invitation.expiresAt!)}.'} Simpan atau salin sekarang; kode hanya ditampilkan saat dibuat.',
           style: const TextStyle(
             fontFamily: 'NalaraInter',
             fontSize: 13,
@@ -108,8 +108,7 @@ class ReferralInvitationTile extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    final expired = invitation.expiresAt.isBefore(DateTime.now());
-    final used = invitation.redeemedAt != null;
+    final lastUsed = invitation.lastUsedAt ?? invitation.redeemedAt;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: NalaraSurfaceCard(
@@ -135,7 +134,9 @@ class ReferralInvitationTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Berlaku sampai ${DateTimeUtils.date(invitation.expiresAt)}',
+                    invitation.expiresAt == null
+                        ? 'Berlaku tanpa batas waktu'
+                        : 'Berlaku sampai ${DateTimeUtils.date(invitation.expiresAt!)}',
                     style: const TextStyle(
                       fontFamily: 'NalaraInter',
                       fontSize: 14,
@@ -147,11 +148,9 @@ class ReferralInvitationTile extends StatelessWidget {
                   Text(
                     invitation.revokedAt != null
                         ? 'Dicabut'
-                        : used
-                        ? 'Sudah digunakan'
-                        : expired
-                        ? 'Kedaluwarsa'
-                        : 'Belum digunakan',
+                        : lastUsed != null
+                        ? 'Aktif · Terakhir digunakan ${DateTimeUtils.date(lastUsed)}'
+                        : 'Aktif · Belum digunakan',
                     style: const TextStyle(
                       fontFamily: 'NalaraInter',
                       fontSize: 12.5,
@@ -161,7 +160,7 @@ class ReferralInvitationTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (invitation.revokedAt == null && !used && !expired)
+            if (invitation.revokedAt == null)
               TextButton(onPressed: onRevoke, child: const Text('Cabut kode')),
           ],
         ),

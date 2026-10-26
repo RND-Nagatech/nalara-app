@@ -29,17 +29,30 @@ class _ReferralPageState extends State<ReferralPage> {
     super.dispose();
   }
 
-  Future<void> _changeUser(bool connected) async {
-    if (connected &&
-        !await confirmAction(
-          context,
-          'Ganti pengguna atau peran? Akses yang sudah terhubung akan tetap tersimpan di perangkat ini.',
-        )) {
+  Future<void> _changeRole() async {
+    final ok = await _submit.run(getIt<AuthCubit>().changeRole);
+    if (ok && mounted) context.go('/roles');
+  }
+
+  Future<void> _changeUser() async {
+    final role = widget.role;
+    final ok = await _submit.run(
+      () => getIt<AuthCubit>().changeUser(role: role),
+    );
+    if (ok && mounted && widget.role == role) context.go(role.entryRoute);
+  }
+
+  void _continue(AccessProfile profile) {
+    final auth = getIt<AuthCubit>().state;
+    if (_submit.state.busy ||
+        auth.status != AuthStatus.portalAuthenticated ||
+        !identical(auth.accessProfile, profile) ||
+        profile.role != widget.role) {
       return;
     }
-    if (!mounted) return;
-    final ok = await _submit.run(getIt<AuthCubit>().changeUser);
-    if (ok && mounted) context.go('/roles');
+    context.go(
+      profile.role == AppRole.parent ? '/parent/home' : '/student/home',
+    );
   }
 
   Future<void> _paste() async {
@@ -54,14 +67,13 @@ class _ReferralPageState extends State<ReferralPage> {
 
   Future<void> _connect() async {
     FocusScope.of(context).unfocus();
+    final role = widget.role;
     final ok = await _submit.run(
-      () => getIt<AuthCubit>().redeemReferral(_code.text, widget.role),
+      () => getIt<AuthCubit>().redeemReferral(_code.text, role),
     );
-    if (ok && mounted) {
+    if (ok && mounted && widget.role == role) {
       _code.clear();
-      context.go(
-        widget.role == AppRole.parent ? '/parent/home' : '/student/home',
-      );
+      context.go(role == AppRole.parent ? '/parent/home' : '/student/home');
     }
   }
 
@@ -72,117 +84,137 @@ class _ReferralPageState extends State<ReferralPage> {
       builder: (context, auth) => BlocBuilder<SubmitCubit, SubmitState>(
         bloc: _submit,
         builder: (context, state) {
-          final profile = auth.accessProfile;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(28, 8, 28, 32),
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: state.busy
-                      ? null
-                      : () => _changeUser(profile != null),
-                  tooltip: 'Ganti peran',
-                  icon: const Icon(Icons.arrow_back),
-                ),
-              ),
-              const SizedBox(height: 22),
-              Image.asset(
-                widget.role.illustration,
-                height: 180,
-                fit: BoxFit.contain,
-                excludeFromSemantics: true,
-              ),
-              const SizedBox(height: 26),
-              Text(
-                profile == null
-                    ? 'Masukkan kode referral'
-                    : 'Akses sudah terhubung',
-                style: const TextStyle(
-                  fontFamily: 'NalaraLora',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                profile == null
-                    ? (widget.role == AppRole.parent
-                          ? 'Gunakan satu kode keluarga dari Guru untuk menghubungkan semua anak Anda.'
-                          : 'Gunakan kode dari Guru untuk menghubungkan data belajar Anda.')
-                    : 'Halo, ${profile.name}. Kode Anda sudah berhasil ditautkan.',
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.6,
-                  color: AuthPalette.muted,
-                ),
-              ),
-              const SizedBox(height: 30),
-              if (profile == null) ...[
-                TextField(
-                  key: const ValueKey('referral-code'),
-                  controller: _code,
-                  enabled: !state.busy,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  maxLength: 80,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    hintText: 'Kode referral dari Guru',
-                    prefixIcon: const Icon(Icons.key_outlined),
-                    suffixIcon: IconButton(
-                      tooltip: 'Tempel kode',
-                      onPressed: state.busy ? null : _paste,
-                      icon: const Icon(Icons.content_paste),
-                    ),
-                    counterText: '',
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: .7),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide.none,
-                    ),
+          final profile =
+              auth.status == AuthStatus.portalAuthenticated &&
+                  auth.accessProfile?.role == widget.role
+              ? auth.accessProfile
+              : null;
+          return PopScope(
+            canPop: !state.busy,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(28, 8, 28, 32),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: state.busy ? null : _changeRole,
+                    tooltip: 'Ganti peran',
+                    icon: const Icon(Icons.arrow_back),
                   ),
-                  onSubmitted: (_) {
-                    if (!state.busy) {
-                      _connect();
-                    }
-                  },
                 ),
                 const SizedBox(height: 22),
-                SubmitButton(
-                  cubit: _submit,
-                  label: 'Hubungkan akses ${widget.role.label}',
-                  onPressed: _connect,
+                Image.asset(
+                  widget.role.illustration,
+                  height: 150,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
                 ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Belum memiliki kode? Minta kepada Guru Anda. Kode hanya dapat digunakan sekali dan masa berlakunya ditentukan Guru.',
-                  style: TextStyle(
-                    fontSize: 13,
+                const SizedBox(height: 26),
+                Text(
+                  profile == null
+                      ? 'Masukkan kode referral'
+                      : 'Akses sudah terhubung',
+                  style: const TextStyle(
+                    fontFamily: 'NalaraLora',
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  profile == null
+                      ? (widget.role == AppRole.parent
+                            ? 'Gunakan satu kode keluarga dari Guru untuk menghubungkan semua anak Anda.'
+                            : 'Gunakan kode dari Guru untuk menghubungkan data belajar Anda.')
+                      : 'Halo, ${profile.name}. Ketuk akun di bawah untuk melanjutkan.',
+                  style: const TextStyle(
+                    fontSize: 15,
                     height: 1.6,
                     color: AuthPalette.muted,
                   ),
                 ),
-              ] else ...[
-                _ConnectedProfile(profile: profile),
-                const SizedBox(height: 20),
-                const Text(
-                  'Kode referral sudah terhubung. Anda bisa mulai melihat data belajar yang dibagikan Guru.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: AuthPalette.muted,
+                const SizedBox(height: 30),
+                if (profile == null) ...[
+                  TextField(
+                    key: const ValueKey('referral-code'),
+                    controller: _code,
+                    enabled: !state.busy,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    maxLength: 80,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: 'Kode referral dari Guru',
+                      prefixIcon: const Icon(Icons.key_outlined),
+                      suffixIcon: IconButton(
+                        tooltip: 'Tempel kode',
+                        onPressed: state.busy ? null : _paste,
+                        icon: const Icon(Icons.content_paste),
+                      ),
+                      counterText: '',
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: .7),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onSubmitted: (_) {
+                      if (!state.busy) {
+                        _connect();
+                      }
+                    },
                   ),
-                ),
-                const SizedBox(height: 16),
-                SubmitButton(
-                  cubit: _submit,
-                  label: 'Ganti pengguna / peran',
-                  onPressed: () => _changeUser(true),
+                  const SizedBox(height: 22),
+                  SubmitButton(
+                    cubit: _submit,
+                    label: 'Hubungkan akses ${widget.role.label}',
+                    onPressed: _connect,
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Gunakan kode referral terbaru dari Guru. Kode dapat dipakai kembali tanpa batas waktu sampai diganti atau dicabut. Belum memiliki kode? Minta kepada Guru Anda.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.6,
+                      color: AuthPalette.muted,
+                    ),
+                  ),
+                ] else ...[
+                  _ConnectedProfile(
+                    profile: profile,
+                    onTap: state.busy ? null : () => _continue(profile),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Kode referral sudah terhubung. Anda bisa mulai melihat data belajar yang dibagikan Guru.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.6,
+                      color: AuthPalette.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SubmitButton(
+                    cubit: _submit,
+                    label: 'Lanjutkan ke beranda',
+                    onPressed: () => _continue(profile),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    key: const ValueKey('referral-change-user'),
+                    onPressed: state.busy ? null : _changeUser,
+                    child: const Text('Ganti pengguna'),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                TextButton(
+                  key: const ValueKey('referral-change-role'),
+                  onPressed: state.busy ? null : _changeRole,
+                  child: const Text('Ganti peran'),
                 ),
               ],
-            ],
+            ),
           );
         },
       ),
@@ -192,26 +224,46 @@ class _ReferralPageState extends State<ReferralPage> {
 
 class _ConnectedProfile extends StatelessWidget {
   final AccessProfile profile;
-  const _ConnectedProfile({required this.profile});
+  final VoidCallback? onTap;
+  const _ConnectedProfile({required this.profile, required this.onTap});
   @override
   Widget build(BuildContext context) => NalaraSurfaceCard(
+    key: const ValueKey('referral-connected-account'),
+    onTap: onTap,
     padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.verified_outlined, color: AuthPalette.green, size: 30),
-        const SizedBox(height: 14),
-        Text(
-          profile.role == AppRole.parent
-              ? '${profile.children.length} anak terhubung'
-              : 'Data Siswa terhubung',
-          style: const TextStyle(
-            fontFamily: 'NalaraInter',
-            fontWeight: FontWeight.w700,
-            fontSize: 17,
-            color: AuthPalette.ink,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                profile.role == AppRole.parent
+                    ? profile.name
+                    : 'Data Siswa terhubung',
+                style: const TextStyle(
+                  fontFamily: 'NalaraInter',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  color: AuthPalette.ink,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AuthPalette.green,
+              size: 24,
+            ),
+          ],
         ),
+        if (profile.role == AppRole.parent) ...[
+          const SizedBox(height: 6),
+          Text(
+            '${profile.children.length} anak terhubung',
+            style: const TextStyle(fontSize: 13, color: AuthPalette.muted),
+          ),
+        ],
         for (var index = 0; index < profile.children.length; index++) ...[
           if (index > 0) const Divider(height: 24),
           _ConnectedChildRow(

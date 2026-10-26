@@ -48,47 +48,50 @@ class HomeEmptySchedule extends StatelessWidget {
           ),
           if (showAction) ...[
             const SizedBox(height: 18),
-            OutlinedButton(
-              key: const ValueKey('home-create-schedule'),
-              onPressed: onCreate,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: HomeStyle.green,
-                backgroundColor: Colors.transparent,
-                side: const BorderSide(color: HomeStyle.green),
-                shape: const StadiumBorder(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                key: const ValueKey('home-create-schedule'),
+                onPressed: onCreate,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: HomeStyle.green,
+                  backgroundColor: Colors.transparent,
+                  side: const BorderSide(color: HomeStyle.green),
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  minimumSize: const Size(0, 48),
                 ),
-                minimumSize: const Size(0, 48),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: HomeStyle.green,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(3),
-                      child: Icon(Icons.add, color: Colors.white, size: 19),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Flexible(
-                    child: Text(
-                      'Buat jadwal les',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'NalaraInter',
-                        fontSize: 14,
-                        height: 1.3,
-                        fontWeight: FontWeight.w600,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: HomeStyle.green,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(3),
+                          child: Icon(Icons.add, color: Colors.white, size: 19),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Buat jadwal les',
+                        style: TextStyle(
+                          fontFamily: 'NalaraInter',
+                          fontSize: 14,
+                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],

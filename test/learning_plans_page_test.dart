@@ -9,6 +9,9 @@ import 'package:nalara/features/learning_goals/domain/repositories/learning_repo
 import 'package:nalara/features/learning_goals/domain/usecases/update_progress.dart';
 import 'package:nalara/features/learning_goals/presentation/pages/learning_pages.dart';
 import 'package:nalara/features/learning_goals/presentation/widgets/learning_plans_style.dart';
+import 'package:nalara/features/learning_goals/presentation/widgets/learning_plan_card.dart';
+import 'package:nalara/features/learning_goals/presentation/widgets/learning_plans_grouped_list.dart';
+import 'package:nalara/shared/widgets/nalara_progress_bar.dart';
 import 'package:nalara/shared/domain/page.dart';
 import 'package:nalara/shared/errors/app_failure.dart';
 import 'package:nalara/utils/app_theme.dart';
@@ -180,13 +183,129 @@ void main() {
       expect(find.text('0%'), findsOneWidget);
       expect(
         tester
-            .widget<LinearProgressIndicator>(
-              find.byType(LinearProgressIndicator),
-            )
-            .value,
+            .widget<NalaraProgressBar>(find.byType(NalaraProgressBar))
+            .progress,
         0,
       );
       expect(find.text('Rencana a'), findsOneWidget);
+      expect(find.byKey(const ValueKey('target-plan-group')), findsOneWidget);
+      expect(find.byKey(const ValueKey('plan-divider-a')), findsOneWidget);
+      expect(find.byKey(const ValueKey('plan-divider-b')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'plans share one rounded card, with compact adjoining rows and plain green progress',
+    (tester) async {
+      viewport(tester);
+      repository.records = [
+        planFixture('a', progress: 30),
+        planFixture('b', progress: 69),
+      ];
+      await render(tester);
+      expect(find.byKey(const ValueKey('target-plan-group')), findsOneWidget);
+      expect(find.byType(LearningPlanCard), findsNothing);
+      expect(find.byType(LearningPlanRow), findsNWidgets(2));
+      final first = find.byKey(const ValueKey('a'));
+      final second = find.byKey(const ValueKey('b'));
+      expect(tester.getRect(first).bottom, tester.getRect(second).top);
+      expect(tester.getSize(first).height, lessThanOrEqualTo(130));
+      expect(
+        tester.getSize(find.byKey(const ValueKey('plan-avatar-a'))),
+        const Size(44, 44),
+      );
+      expect(find.byKey(const ValueKey('plan-divider-a')), findsOneWidget);
+      expect(find.byKey(const ValueKey('plan-divider-b')), findsNothing);
+      final rows = tester
+          .widgetList<LearningPlanRow>(find.byType(LearningPlanRow))
+          .toList();
+      expect(rows.first.borderRadius.topLeft, isNot(Radius.zero));
+      expect(rows.first.borderRadius.bottomLeft, Radius.zero);
+      expect(rows.last.borderRadius.topLeft, Radius.zero);
+      expect(rows.last.borderRadius.bottomLeft, isNot(Radius.zero));
+      final bars = tester
+          .widgetList<NalaraProgressBar>(find.byType(NalaraProgressBar))
+          .toList();
+      expect(bars.map((bar) => bar.progress), [30, 69]);
+      expect(
+        bars.every((bar) => bar.accentColor == null && bar.height == 6),
+        isTrue,
+      );
+      expect(
+        find.byKey(const ValueKey('nalara-progress-accent')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a single plan has both rounded ends, no separator and keeps null progress empty',
+    (tester) async {
+      viewport(tester);
+      repository.records = [planFixture('only', progress: null)];
+      await render(tester);
+      final row = tester.widget<LearningPlanRow>(find.byType(LearningPlanRow));
+      expect(row.borderRadius.topLeft, isNot(Radius.zero));
+      expect(row.borderRadius.bottomLeft, isNot(Radius.zero));
+      expect(row.showDivider, isFalse);
+      expect(find.text('Belum ada target'), findsOneWidget);
+      expect(find.byType(NalaraProgressBar), findsNothing);
+      expect(find.text('0%'), findsNothing);
+    },
+  );
+
+  testWidgets('grouped plans keep lazy row building and the fixed header', (
+    tester,
+  ) async {
+    viewport(tester);
+    repository.records = List.generate(100, (index) => planFixture('p$index'));
+    repository.limit = 100;
+    await render(tester);
+    expect(
+      tester
+          .widget<LearningPlansGroupedList>(
+            find.byType(LearningPlansGroupedList),
+          )
+          .plans
+          .length,
+      100,
+    );
+    expect(find.byType(LearningPlanRow).evaluate().length, lessThan(100));
+    final top = tester.getTopLeft(find.text('Target belajar'));
+    await tester.drag(
+      find.byKey(const ValueKey('target-scroll')),
+      const Offset(0, -350),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('Target belajar')), top);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'read-only target menus share grouped rows without teacher add actions',
+    (tester) async {
+      viewport(tester);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: LearningPlansPage(
+            readOnly: true,
+            routePrefix: '/parent',
+            loadPlans: (page, studentId) async => PageResult(
+              items: [planFixture('a'), planFixture('b')],
+              total: 2,
+              page: page,
+              limit: 30,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(LearningPlanRow), findsNWidgets(2));
+      expect(find.byKey(const ValueKey('target-plan-group')), findsOneWidget);
+      expect(find.byKey(const ValueKey('target-add-list')), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -279,8 +398,9 @@ void main() {
     await tester.ensureVisible(find.byTooltip('Muat ulang target'));
     await tester.tap(find.byTooltip('Muat ulang target'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('target-load-more')));
+    await tester.ensureVisible(find.text('30%'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('target-load-more')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

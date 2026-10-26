@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../utils/date_time_utils.dart';
+import '../../../../shared/widgets/nalara_avatar.dart';
 import '../../domain/entities/progress_form_data.dart';
 import 'progress_form_style.dart';
 
@@ -24,18 +25,26 @@ class ProgressStudentHeader extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(18, 8, 0, 28),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: ProgressFormStyle.paleGreen,
-                child: Text(
-                  initials.isEmpty ? '—' : initials,
-                  key: const ValueKey('progress-student-initials'),
-                  style: ProgressFormStyle.label.copyWith(
-                    fontSize: 20,
-                    color: ProgressFormStyle.green,
+              if (data.student.avatarId != null)
+                NalaraAvatar(
+                  name: name,
+                  avatarId: data.student.avatarId,
+                  size: 56,
+                  backgroundColor: ProgressFormStyle.paleGreen,
+                )
+              else
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: ProgressFormStyle.paleGreen,
+                  child: Text(
+                    initials.isEmpty ? '—' : initials,
+                    key: const ValueKey('progress-student-initials'),
+                    style: ProgressFormStyle.label.copyWith(
+                      fontSize: 20,
+                      color: ProgressFormStyle.green,
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

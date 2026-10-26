@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../../shared/domain/page.dart';
 import '../../../shared/network/api_client.dart';
+import '../../../shared/errors/app_failure.dart';
 import '../../../utils/constants.dart';
 import '../domain/tutor_tools.dart';
 
@@ -91,8 +92,21 @@ class TutorToolsRepositoryImpl implements TutorToolsRepository {
       );
   @override
   Future<void> saveActivity(ActivityDraft d, {String? id}) async {
+    if (d.studentIds.isEmpty ||
+        d.studentIds.length > 100 ||
+        d.studentIds.toSet().length != d.studentIds.length) {
+      throw const AppFailure('Pilih 1–100 siswa yang berbeda.');
+    }
+    if (id != null && d.studentIds.length != 1) {
+      throw const AppFailure(
+        'Penerima aktivitas yang sudah dibuat tidak dapat diubah menjadi grup.',
+      );
+    }
     final data = {
-      'studentId': d.studentId,
+      if (id == null)
+        'studentIds': d.studentIds
+      else
+        'studentId': d.studentIds.single,
       'subjectId': d.subjectId,
       'kind': d.kind,
       'title': d.title,
@@ -102,7 +116,7 @@ class TutorToolsRepositoryImpl implements TutorToolsRepository {
       if (d.dueAt != null) 'dueAt': d.dueAt!.toUtc().toIso8601String(),
     };
     if (id == null) {
-      await source.teacher.post(ApiConstants.assignments, data);
+      await source.teacher.post(ApiConstants.assignmentBatch, data);
     } else {
       await source.teacher.patch(ApiConstants.assignment(id), data);
     }
@@ -172,6 +186,8 @@ class TutorToolsRepositoryImpl implements TutorToolsRepository {
       progress: j['progress'] != false,
       reports: j['reports'] != false,
       assignments: j['assignments'] != false,
+      tuitionTeacherReminders: j['tuitionTeacherReminders'] != false,
+      tuitionParentReminders: j['tuitionParentReminders'] != false,
     );
   }
 
@@ -192,6 +208,8 @@ class TutorToolsRepositoryImpl implements TutorToolsRepository {
       'progress': p.progress,
       'reports': p.reports,
       'assignments': p.assignments,
+      'tuitionTeacherReminders': p.tuitionTeacherReminders,
+      'tuitionParentReminders': p.tuitionParentReminders,
     });
   }
 

@@ -89,6 +89,7 @@ class _StudentHomePageState extends State<StudentHomePage>
       return HomeDashboardView(
         header: HomeRoleHeader(
           name: data?.student.name ?? '',
+          avatarId: data?.student.avatarId,
           date: data == null
               ? 'Beranda Siswa'
               : DateFormat(

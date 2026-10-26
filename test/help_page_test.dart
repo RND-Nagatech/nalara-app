@@ -6,6 +6,7 @@ import 'package:nalara/features/profile/presentation/content/help_topics.dart';
 import 'package:nalara/features/profile/presentation/pages/more_pages.dart';
 import 'package:nalara/features/profile/presentation/widgets/help_center_style.dart';
 import 'package:nalara/features/profile/presentation/widgets/help_topic_card.dart';
+import 'package:nalara/shared/widgets/teacher_bottom_navigation.dart';
 import 'package:nalara/utils/app_theme.dart';
 
 void main() {
@@ -55,7 +56,10 @@ void main() {
       cubit.search('  Kode   KELUARGA  ');
       expect(cubit.state.topics.map((topic) => topic.id), contains('referral'));
       cubit.search('OTP');
-      expect(cubit.state.topics.single.id, 'connection-account');
+      expect(
+        cubit.state.topics.map((topic) => topic.id),
+        contains('connection-account'),
+      );
       cubit.search('musik');
       expect(
         cubit.state.topics.map((topic) => topic.id),
@@ -140,7 +144,7 @@ void main() {
       );
       expect(find.text(referral.answer), findsOneWidget);
       expect(referral.steps.join(' '), contains('satu kode Orang Tua'));
-      expect(referral.note, contains('7 hari dan digunakan sekali'));
+      expect(referral.note, contains('digunakan kembali tanpa batas waktu'));
       expect(find.text(referral.note!), findsOneWidget);
       await tap(tester, key('toggle-referral'));
       expect(key('answer-referral'), findsNothing);
@@ -152,7 +156,7 @@ void main() {
     (tester) async {
       viewport(tester);
       await render(tester);
-      await tester.enterText(key('search'), 'OTP');
+      await tester.enterText(key('search'), 'kedaluwarsa OTP');
       await tester.pumpAndSettle();
       expect(find.byType(HelpTopicCard), findsOneWidget);
       expect(key('topic-connection-account'), findsOneWidget);
@@ -193,7 +197,13 @@ void main() {
         MaterialApp.router(theme: buildAppTheme(), routerConfig: router),
       );
       await tester.pumpAndSettle();
-      await tap(tester, key('open-teaching-guide'));
+      final guideButton = key('open-teaching-guide');
+      await tester.ensureVisible(guideButton);
+      // A second tap during the first route transition must not create a
+      // second page with the same GoRouter page key.
+      await tester.tap(guideButton);
+      await tester.tap(guideButton);
+      await tester.pumpAndSettle();
       expect(find.text('Tujuan /teacher/getting-started'), findsOneWidget);
       router.pop();
       await tester.pumpAndSettle();
@@ -201,9 +211,16 @@ void main() {
         await tap(tester, key('toggle-${topic.id}'));
         await tap(tester, key('open-${topic.id}'));
         expect(find.text('Tujuan ${topic.route}'), findsOneWidget);
-        router.pop();
-        await tester.pumpAndSettle();
-        expect(key('answer-${topic.id}'), findsOneWidget);
+        if (isTeacherShellLocation(topic.route!)) {
+          // Shell roots are selected with go(), not pushed on top of the
+          // existing shell page. Return to the help route for the next topic.
+          router.go('/teacher/help');
+          await tester.pumpAndSettle();
+        } else {
+          router.pop();
+          await tester.pumpAndSettle();
+          expect(key('answer-${topic.id}'), findsOneWidget);
+        }
       }
       await tap(tester, key('open-privacy'));
       expect(find.text('Tujuan /legal/kebijakan-privasi'), findsOneWidget);
@@ -221,13 +238,20 @@ void main() {
         'getting-started',
         'subjects',
         'students',
+        'profile-basics',
+        'student-groups',
         'schedules',
+        'timezone',
+        'schedule-timeline',
         'reschedule',
         'progress',
+        'progress-summary',
         'session-reports',
         'report-visibility',
         'referral',
         'archive-access',
+        'tuition-fees',
+        'tuition-reminders',
         'tasks-materials',
         'notifications',
         'subscription',

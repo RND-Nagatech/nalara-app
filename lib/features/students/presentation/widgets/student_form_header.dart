@@ -33,57 +33,58 @@ class StudentFormIntro extends StatelessWidget {
         fit: BoxFit.contain,
         excludeFromSemantics: true,
       );
-      return Stack(
-        clipBehavior: Clip.hardEdge,
+      final text = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!stacked)
-            Positioned(
-              right: -18,
-              top: 32,
-              width: math.min(210, constraints.maxWidth * .53),
-              child: IgnorePointer(child: artwork),
+          const Text(
+            'Data siswa',
+            style: TextStyle(
+              fontFamily: 'NalaraInter',
+              fontSize: 18,
+              height: 1.2,
+              fontWeight: FontWeight.w700,
+              color: StudentFormStyle.ink,
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Data siswa',
-                  style: const TextStyle(
-                    fontFamily: 'NalaraInter',
-                    fontSize: 18,
-                    height: 1.2,
-                    fontWeight: FontWeight.w700,
-                    color: StudentFormStyle.ink,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: stacked ? double.infinity : 204,
-                  ),
-                  child: const Text(
-                    'Isi data yang diperlukan untuk pembelajaran saja.',
-                    style: TextStyle(
-                      fontFamily: 'NalaraInter',
-                      fontSize: 13,
-                      height: 1.45,
-                      color: StudentFormStyle.muted,
-                    ),
-                  ),
-                ),
-                if (stacked)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: SizedBox(width: 180, child: artwork),
-                  )
-                else
-                  const SizedBox(height: 10),
-              ],
+          ),
+          const SizedBox(height: 7),
+          const Text(
+            'Isi data yang diperlukan untuk pembelajaran saja.',
+            style: TextStyle(
+              fontFamily: 'NalaraInter',
+              fontSize: 13,
+              height: 1.45,
+              color: StudentFormStyle.muted,
             ),
           ),
         ],
+      );
+
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
+        child: stacked
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  text,
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: SizedBox(width: 180, child: artwork),
+                  ),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: text),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: math.min(230, constraints.maxWidth * .56),
+                    child: IgnorePointer(child: artwork),
+                  ),
+                ],
+              ),
       );
     },
   );

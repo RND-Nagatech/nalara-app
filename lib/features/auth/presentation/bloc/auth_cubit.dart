@@ -87,6 +87,55 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  void updateOwnAvatar(Teacher expectedTeacher, String? avatarId) {
+    if (isClosed ||
+        state.status != AuthStatus.authenticated ||
+        !identical(state.teacher, expectedTeacher)) {
+      return;
+    }
+    emit(
+      AuthState(
+        state.status,
+        teacher: expectedTeacher.withAvatar(avatarId),
+        onboardingSeen: state.onboardingSeen,
+        selectedRole: state.selectedRole,
+      ),
+    );
+  }
+
+  void updateOwnPhone(Teacher expectedTeacher, String phone) {
+    if (isClosed ||
+        state.status != AuthStatus.authenticated ||
+        !identical(state.teacher, expectedTeacher)) {
+      return;
+    }
+    emit(
+      AuthState(
+        state.status,
+        teacher: expectedTeacher.withPhone(phone),
+        onboardingSeen: state.onboardingSeen,
+        selectedRole: state.selectedRole,
+      ),
+    );
+  }
+
+  bool updateOwnTimezone(Teacher expectedTeacher, String timezone) {
+    if (isClosed ||
+        state.status != AuthStatus.authenticated ||
+        !identical(state.teacher, expectedTeacher)) {
+      return false;
+    }
+    emit(
+      AuthState(
+        state.status,
+        teacher: expectedTeacher.withTimezone(timezone),
+        onboardingSeen: state.onboardingSeen,
+        selectedRole: state.selectedRole,
+      ),
+    );
+    return true;
+  }
+
   Future<void> login(
     String identifier,
     String password, {
@@ -174,7 +223,12 @@ class AuthCubit extends Cubit<AuthState> {
     // server session instead of forcing the user to log in or redeem a code
     // again after switching roles.
     final teacher = role == AppRole.teacher ? await repository.restore() : null;
-    final profile = role == AppRole.teacher ? null : await access?.restore();
+    final restoredProfile = role == AppRole.teacher
+        ? null
+        : await access?.restore();
+    // Parent and student share the portal token namespace. Only resume a
+    // server-verified session that matches the role the user actually chose.
+    final profile = restoredProfile?.role == role ? restoredProfile : null;
     if (!isClosed && (teacher != null || profile != null)) {
       emit(
         AuthState(
@@ -219,15 +273,53 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  Future<void> changeUser() async {
+  Future<void> changeRole() async {
     await push?.deactivate();
 
-    // Switching users/roles is not a logout. Keep the independently stored
-    // sessions so the last selected role can be restored on the next launch
-    // and a redeemed referral code is never requested a second time.
+    // Switching roles is not a logout. Keep independently stored sessions
+    // so choosing the same role can resume its valid server session.
     if (!isClosed) {
       emit(const AuthState(AuthStatus.unauthenticated, onboardingSeen: true));
     }
+  }
+
+  Future<void> changeUser({AppRole? role}) async {
+    final selected = role ?? state.accessProfile?.role ?? state.selectedRole;
+    if (selected == null || selected == AppRole.teacher) {
+      await changeRole();
+      return;
+    }
+    final service = access;
+    if (service == null) {
+      throw StateError('Layanan referral belum dikonfigurasi');
+    }
+    await push?.deactivate();
+    // Clear/revoke only the portal credential, leaving teacher credentials
+    // independent. Failure keeps the current account available for retry.
+    await service.logout();
+    await service.saveRole(selected);
+    if (!isClosed) {
+      emit(
+        AuthState(
+          AuthStatus.unauthenticated,
+          onboardingSeen: true,
+          selectedRole: selected,
+        ),
+      );
+    }
+  }
+
+  Future<void> deletePortalAccount() async {
+    final role = state.accessProfile?.role ?? state.selectedRole;
+    if (role == null || role == AppRole.teacher) {
+      throw StateError('Penghapusan ini khusus akun Orang Tua atau Siswa.');
+    }
+    final service = access;
+    if (service == null) throw StateError('Layanan portal belum dikonfigurasi.');
+    await push?.deactivate();
+    await service.deleteAccount(role);
+    await push?.forgetDeletedAccount();
+    expirePortal();
   }
 
   Future<void> logout() async {

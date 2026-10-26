@@ -62,4 +62,9 @@ class SubscriptionPayment {
     this.checkoutUrl,
   });
   bool get paid => status == 'paid';
+  bool get open => status == 'creating' || status == 'pending';
+  bool get canContinue {
+    final uri = Uri.tryParse(checkoutUrl ?? '');
+    return open && uri != null && uri.scheme == 'https' && uri.host.isNotEmpty;
+  }
 }

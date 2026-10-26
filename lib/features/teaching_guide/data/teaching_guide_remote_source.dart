@@ -6,6 +6,6 @@ class TeachingGuideRemoteSource {
   const TeachingGuideRemoteSource(this.api);
 
   Future<Map<String, dynamic>> get() => api.get(ApiConstants.teachingGuide);
-  Future<Map<String, dynamic>> setDismissed(bool value) =>
-      api.patch(ApiConstants.teachingGuidePreferences, {'dismissed': value});
+  Future<Map<String, dynamic>> acknowledgeTutorial() =>
+      api.patch(ApiConstants.teachingGuidePreferences, {'tutorialSeen': true});
 }

@@ -62,4 +62,10 @@ class AccessRepositoryImpl implements AccessRepository {
     }
     await tokens.clear();
   }
+
+  @override
+  Future<void> deleteAccount(AppRole role) async {
+    await remote.deleteAccount(role);
+    await tokens.clear();
+  }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../features/teaching_guide/presentation/teaching_tutorial_scope.dart';
+import '../../features/profile/presentation/widgets/profile_completion_badge.dart';
 import 'nalara_bottom_navigation.dart';
 
 const teacherNavigationLocations = [
@@ -8,6 +10,9 @@ const teacherNavigationLocations = [
   '/teacher/targets',
   '/teacher/more',
 ];
+
+bool isTeacherShellLocation(String route) =>
+    teacherNavigationLocations.contains(route);
 
 /// Shared visual navigation; callers retain ownership of routing/branch state.
 class TeacherBottomNavigation extends StatelessWidget {
@@ -29,23 +34,53 @@ class TeacherBottomNavigation extends StatelessWidget {
         label: 'Beranda',
       ),
       NavigationDestination(
-        icon: Icon(Icons.people_outline),
-        selectedIcon: Icon(Icons.people),
+        icon: TutorialTarget(
+          id: 'menu-student',
+          child: Icon(Icons.people_outline),
+        ),
+        selectedIcon: TutorialTarget(
+          id: 'menu-student',
+          child: Icon(Icons.people),
+        ),
         label: 'Siswa',
       ),
       NavigationDestination(
-        icon: Icon(Icons.calendar_month_outlined),
-        selectedIcon: Icon(Icons.calendar_month),
+        icon: TutorialTarget(
+          id: 'menu-schedule',
+          child: Icon(Icons.calendar_month_outlined),
+        ),
+        selectedIcon: TutorialTarget(
+          id: 'menu-schedule',
+          child: Icon(Icons.calendar_month),
+        ),
         label: 'Jadwal',
       ),
       NavigationDestination(
-        icon: Icon(Icons.flag_outlined),
-        selectedIcon: Icon(Icons.flag),
+        icon: TutorialTarget(
+          id: 'menu-target',
+          child: Icon(Icons.flag_outlined),
+        ),
+        selectedIcon: TutorialTarget(
+          id: 'menu-target',
+          child: Icon(Icons.flag),
+        ),
         label: 'Target',
       ),
       NavigationDestination(
-        icon: Icon(Icons.grid_view_outlined),
-        selectedIcon: Icon(Icons.grid_view),
+        icon: TutorialTarget(
+          id: 'menu-subject',
+          child: ProfileCompletionBadge(
+            includeGuide: true,
+            child: Icon(Icons.grid_view_outlined),
+          ),
+        ),
+        selectedIcon: TutorialTarget(
+          id: 'menu-subject',
+          child: ProfileCompletionBadge(
+            includeGuide: true,
+            child: Icon(Icons.grid_view),
+          ),
+        ),
         label: 'Lainnya',
       ),
     ],

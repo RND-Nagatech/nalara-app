@@ -30,7 +30,7 @@ abstract final class ProgressFormStyle {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFFEFCF7),
+      fillColor: Colors.white,
       hintStyle: body,
       counterStyle: body.copyWith(fontSize: 10.5),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),

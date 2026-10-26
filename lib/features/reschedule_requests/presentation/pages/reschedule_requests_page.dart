@@ -14,6 +14,7 @@ import '../../domain/repositories/reschedule_requests_repository.dart';
 import '../bloc/reschedule_requests_cubit.dart';
 import '../widgets/reschedule_proposal_sheet.dart';
 import '../widgets/reschedule_request_card.dart';
+import '../widgets/reschedule_requests_grouped_list.dart';
 
 typedef RescheduleRequestAction =
     Future<void> Function(RescheduleRequest request, String action);
@@ -245,40 +246,36 @@ class _RescheduleRequestsPageState extends State<RescheduleRequestsPage> {
             else
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                sliver: SliverList.builder(
+                sliver: RescheduleRequestsGroupedList(
                   itemCount: data.items.length,
-                  itemBuilder: (context, index) {
+                  itemBuilder: (context, index, radius, divider) {
                     final request = data.items[index];
                     final enabled = state.canAct;
-                    return Padding(
+                    return RescheduleRequestCard(
                       key: ValueKey(request.id),
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: RescheduleRequestCard(
-                        request: request,
-                        timezone: _timezone,
-                        parent: widget.parent,
-                        studentName: widget.studentNames[request.studentId],
-                        studentGrade: widget.studentGrades[request.studentId],
-                        busy: state.activeRequestId == request.id,
-                        onApprove: enabled
-                            ? () => _act(request, 'approved')
-                            : null,
-                        onReject: enabled
-                            ? () => _act(request, 'rejected')
-                            : null,
-                        onPropose: enabled
-                            ? () => _act(request, 'proposed')
-                            : null,
-                        onCancel: enabled
-                            ? () => _act(request, 'cancel')
-                            : null,
-                        onAccept: enabled
-                            ? () => _act(request, 'accept')
-                            : null,
-                        onDecline: enabled
-                            ? () => _act(request, 'decline')
-                            : null,
-                      ),
+                      grouped: true,
+                      borderRadius: radius,
+                      showDivider: divider,
+                      request: request,
+                      timezone: _timezone,
+                      parent: widget.parent,
+                      studentName: widget.studentNames[request.studentId],
+                      studentGrade: widget.studentGrades[request.studentId],
+                      busy: state.activeRequestId == request.id,
+                      onApprove: enabled
+                          ? () => _act(request, 'approved')
+                          : null,
+                      onReject: enabled
+                          ? () => _act(request, 'rejected')
+                          : null,
+                      onPropose: enabled
+                          ? () => _act(request, 'proposed')
+                          : null,
+                      onCancel: enabled ? () => _act(request, 'cancel') : null,
+                      onAccept: enabled ? () => _act(request, 'accept') : null,
+                      onDecline: enabled
+                          ? () => _act(request, 'decline')
+                          : null,
                     );
                   },
                 ),

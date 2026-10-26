@@ -8,7 +8,9 @@ class DateTimeUtils {
   static String date(DateTime utc, [String timezone = zone]) =>
       DateFormat('d MMM yyyy', 'id_ID').format(local(utc, timezone));
   static String time(DateTime utc, [String timezone = zone]) =>
-      DateFormat('HH:mm', 'id_ID').format(local(utc, timezone));
+      // HH:mm has no localized month/day names, so it does not need optional
+      // intl locale data to be initialized by a caller.
+      DateFormat('HH:mm').format(local(utc, timezone));
   static String full(DateTime utc, [String timezone = zone]) =>
       '${date(utc, timezone)} · ${time(utc, timezone)}';
   static DateTime fromWallTime(

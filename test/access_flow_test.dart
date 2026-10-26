@@ -9,6 +9,8 @@ import 'package:nalara/features/auth/domain/entities/teacher.dart';
 import 'package:nalara/features/auth/domain/repositories/auth_repository.dart';
 import 'package:nalara/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:nalara/shared/errors/app_failure.dart';
+import 'package:nalara/features/parent_portal/domain/entities/parent_portal.dart';
+import 'package:nalara/features/parent_portal/domain/repositories/parent_portal_repository.dart';
 import 'package:nalara/utils/app_theme.dart';
 import 'package:nalara/utils/injector.dart';
 
@@ -52,6 +54,7 @@ class EntryAccess implements AccessRepository {
   AppRole? submittedRole;
   int calls = 0;
   int logoutCalls = 0;
+  String? logoutError;
   Completer<void>? gate;
   @override
   Future<AppRole?> savedRole() async => role;
@@ -73,10 +76,26 @@ class EntryAccess implements AccessRepository {
   }
 
   @override
-  Future<void> logout() async {
-    logoutCalls++;
+  Future<void> deleteAccount(AppRole role) async {
     profile = null;
   }
+
+  @override
+  Future<void> logout() async {
+    logoutCalls++;
+    if (logoutError != null) throw AppFailure(logoutError!);
+    profile = null;
+  }
+}
+
+class EntryParentRepository implements ParentPortalRepository {
+  @override
+  Future<ParentDashboard> dashboard({String? studentId}) async =>
+      throw const AppFailure(
+        'Data beranda belum dimuat dalam pengujian akses.',
+      );
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 Future<({AuthCubit auth, void Function() dispose})> mountEntry(
@@ -91,6 +110,7 @@ Future<({AuthCubit auth, void Function() dispose})> mountEntry(
   final auth = AuthCubit(EntryAuth(), access: access);
   await auth.restore();
   getIt.registerSingleton(auth);
+  getIt.registerSingleton<ParentPortalRepository>(EntryParentRepository());
   final refresh = AuthRouterRefresh(auth);
   final router = buildRouter(auth, refresh);
   await tester.pumpWidget(
@@ -152,7 +172,7 @@ void main() {
     },
   );
   test(
-    'switching users keeps the redeemed portal session for the next role selection',
+    'switching roles keeps the redeemed portal session for the next role selection',
     () async {
       final access = EntryAccess()
         ..role = AppRole.parent
@@ -160,7 +180,7 @@ void main() {
       final auth = AuthCubit(EntryAuth(), access: access);
 
       await auth.restore();
-      await auth.changeUser();
+      await auth.changeRole();
 
       expect(auth.state.status, AuthStatus.unauthenticated);
       expect(access.profile, isNotNull);
@@ -171,6 +191,70 @@ void main() {
       expect(auth.state.status, AuthStatus.portalAuthenticated);
       expect(auth.state.accessProfile, linkedParent);
       expect(access.calls, 0);
+      await auth.close();
+    },
+  );
+  for (final role in [AppRole.student, AppRole.parent]) {
+    test(
+      'changing $role user revokes the portal and keeps the referral role',
+      () async {
+        final profile = AccessProfile(
+          role: role,
+          name: 'Akun tersimpan',
+          children: linkedParent.children,
+        );
+        final repository = EntryAuth();
+        final access = EntryAccess()
+          ..role = role
+          ..profile = profile;
+        final auth = AuthCubit(repository, access: access);
+        await auth.restore();
+        await auth.changeUser(role: role);
+        expect(access.logoutCalls, 1);
+        expect(access.profile, isNull);
+        expect(auth.state.status, AuthStatus.unauthenticated);
+        expect(auth.state.selectedRole, role);
+        expect(auth.state.accessProfile, isNull);
+        expect(access.role, role);
+        await auth.chooseRole(role);
+        expect(auth.state.status, AuthStatus.unauthenticated);
+        expect(auth.state.selectedRole, role);
+        await auth.close();
+      },
+    );
+    test('choosing $role cannot restore the other portal role', () async {
+      final otherRole = role == AppRole.student
+          ? AppRole.parent
+          : AppRole.student;
+      final access = EntryAccess()
+        ..role = otherRole
+        ..profile = AccessProfile(
+          role: otherRole,
+          name: 'Akun peran lain',
+          children: linkedParent.children,
+        );
+      final auth = AuthCubit(EntryAuth(), access: access);
+      await auth.chooseRole(role);
+      expect(auth.state.status, AuthStatus.unauthenticated);
+      expect(auth.state.selectedRole, role);
+      expect(auth.state.accessProfile, isNull);
+      expect(access.logoutCalls, 0);
+      await auth.close();
+    });
+  }
+  test(
+    'a failed portal logout preserves the current account for retry',
+    () async {
+      final access = EntryAccess()
+        ..role = AppRole.parent
+        ..profile = linkedParent
+        ..logoutError = 'Server tidak dapat dihubungi';
+      final auth = AuthCubit(EntryAuth(), access: access);
+      await auth.restore();
+      await expectLater(auth.changeUser(), throwsA(isA<AppFailure>()));
+      expect(auth.state.status, AuthStatus.portalAuthenticated);
+      expect(auth.state.accessProfile, linkedParent);
+      expect(access.profile, linkedParent);
       await auth.close();
     },
   );
@@ -232,7 +316,7 @@ void main() {
     );
   }
   testWidgets(
-    'one code connects two children, double submit is ignored, and no portal dashboard exists',
+    'one code connects two children, double submit is ignored, and opens parent Home',
     (tester) async {
       final access = EntryAccess()
         ..role = AppRole.parent
@@ -255,11 +339,14 @@ void main() {
       expect(access.calls, 1);
       access.gate!.complete();
       await tester.pumpAndSettle();
-      expect(find.text('Akses sudah terhubung'), findsOneWidget);
-      expect(find.text('2 anak terhubung'), findsOneWidget);
-      expect(find.text('Alya'), findsOneWidget);
-      expect(find.text('Bima'), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(harness.auth.state.status, AuthStatus.portalAuthenticated);
+      expect(
+        harness.auth.state.accessProfile!.children.map((child) => child.name),
+        ['Alya', 'Bima'],
+      );
+      expect(find.text('Beranda Orang Tua'), findsOneWidget);
+      expect(find.text('Akses sudah terhubung'), findsNothing);
+      expect(find.byType(NavigationDestination), findsNWidgets(5));
       await tester.pumpWidget(const SizedBox.shrink());
       harness.dispose();
       await harness.auth.close();
@@ -276,9 +363,9 @@ void main() {
         access,
         route: '/teacher/profile',
       );
-      expect(find.text('Akses sudah terhubung'), findsOneWidget);
+      expect(find.text('Beranda Orang Tua'), findsOneWidget);
       expect(find.byKey(const ValueKey('onboarding-pages')), findsNothing);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(NavigationDestination), findsNWidgets(5));
       await tester.pumpWidget(const SizedBox.shrink());
       harness.dispose();
       await harness.auth.close();

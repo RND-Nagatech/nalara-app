@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/domain/page.dart';
 import '../../../../shared/state/load_cubit.dart';
+import '../../../../shared/widgets/nalara_card_style.dart';
 import '../../../../shared/widgets/nalara_error_notice.dart';
 import '../../../../shared/widgets/nalara_load_more.dart';
 import '../../domain/entities/family.dart';
 import 'families_empty_state.dart';
 import 'families_style.dart';
-import 'family_list_card.dart';
+import 'family_list_row.dart';
 
 class FamiliesListBody extends StatelessWidget {
   final LoadState<PageResult<Family>> state;
@@ -75,17 +76,31 @@ class FamiliesListBody extends StatelessWidget {
             if (state.error != null) SliverToBoxAdapter(child: failure),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              sliver: SliverList.builder(
-                itemCount: data.items.length * 2 - 1,
-                itemBuilder: (context, index) {
-                  if (index.isOdd) return const SizedBox(height: 10);
-                  final family = data.items[index ~/ 2];
-                  return FamilyListCard(
-                    key: ValueKey(family.id),
-                    family: family,
-                    onTap: () => onOpen(family),
-                  );
-                },
+              sliver: DecoratedSliver(
+                key: const ValueKey('families-group'),
+                decoration: NalaraCardStyle.decoration(),
+                sliver: SliverPadding(
+                  padding: const EdgeInsets.all(1),
+                  sliver: SliverList.builder(
+                    itemCount: data.items.length,
+                    itemBuilder: (context, index) {
+                      final family = data.items[index];
+                      const radius = Radius.circular(17);
+                      return FamilyListRow(
+                        key: ValueKey(family.id),
+                        family: family,
+                        onTap: () => onOpen(family),
+                        showDivider: index < data.items.length - 1,
+                        borderRadius: BorderRadius.vertical(
+                          top: index == 0 ? radius : Radius.zero,
+                          bottom: index == data.items.length - 1
+                              ? radius
+                              : Radius.zero,
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
             SliverPadding(

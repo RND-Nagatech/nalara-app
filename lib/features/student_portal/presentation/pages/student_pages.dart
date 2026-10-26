@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/student_bottom_navigation.dart';
 import '../../../../utils/injector.dart';
-import '../../../auth/presentation/bloc/auth_cubit.dart';
+import '../../../access/domain/entities/app_role.dart';
+import '../../../access/presentation/widgets/portal_account_actions.dart';
 import '../../../dashboard/presentation/widgets/home_style.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
-import '../../../profile/presentation/content/help_topics.dart';
 import '../../../profile/presentation/pages/help_page.dart';
 import '../../../profile/presentation/pages/more_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
@@ -14,6 +14,7 @@ import '../../../profile/presentation/widgets/more_style.dart';
 import '../../../students/domain/entities/student.dart';
 import '../../data/repositories/student_notifications_repository.dart';
 import '../../domain/repositories/student_portal_repository.dart';
+import '../content/student_help_topics.dart';
 import 'student_schedule_page.dart';
 
 export 'student_dashboard_page.dart';
@@ -81,11 +82,7 @@ class StudentMorePage extends StatelessWidget {
         icon: Icons.help_rounded,
       ),
     ],
-    footer: OutlinedButton.icon(
-      onPressed: () => getIt<AuthCubit>().changeUser(),
-      icon: const Icon(Icons.logout),
-      label: const Text('Ganti pengguna'),
-    ),
+    footer: const PortalAccountActions(role: AppRole.student),
   );
 }
 
@@ -121,50 +118,6 @@ class StudentHelpPage extends StatelessWidget {
   Widget build(BuildContext context) => const HelpPage(
     routePrefix: '/student',
     searchHint: 'Coba kata kunci seperti jadwal, target, tugas, atau laporan.',
-    topics: [
-      HelpTopic(
-        id: 'schedule',
-        title: 'Bagaimana melihat jadwal dan presensi?',
-        answer:
-            'Buka Jadwal untuk melihat sesi harian, mingguan, atau bulanan. Detail sesi menampilkan Guru, bidang belajar, waktu, dan presensi Anda saja.',
-        keywords: 'jadwal harian mingguan bulanan presensi guru sesi',
-        route: '/student/schedule',
-        actionLabel: 'Buka jadwal',
-      ),
-      HelpTopic(
-        id: 'targets',
-        title: 'Bagaimana melihat kemajuan belajar?',
-        answer:
-            'Buka Target, pilih rencana belajar, lalu pilih target untuk melihat deskripsi, indikator keberhasilan, dan riwayat progress yang dibagikan Guru. Target dan progress hanya dapat diubah Guru.',
-        keywords: 'target progres progress riwayat rencana indikator',
-        route: '/student/targets',
-        actionLabel: 'Buka target belajar',
-      ),
-      HelpTopic(
-        id: 'reports',
-        title: 'Mengapa laporan belum muncul?',
-        answer:
-            'Laporan muncul setelah Guru menerbitkan dan membagikannya kepada siswa. Laporan internal Guru atau khusus Orang Tua tidak ditampilkan.',
-        keywords: 'laporan terbit visibilitas dibagikan',
-        route: '/student/reports',
-        actionLabel: 'Buka laporan',
-      ),
-      HelpTopic(
-        id: 'materials',
-        title: 'Di mana tugas dan materi saya?',
-        answer:
-            'Buka Tugas & Materi untuk melihat aktivitas yang dibagikan Guru khusus untuk Anda.',
-        keywords: 'tugas materi aktivitas',
-        route: '/student/materials',
-        actionLabel: 'Buka tugas & materi',
-      ),
-      HelpTopic(
-        id: 'account',
-        title: 'Bagaimana jika data atau akses bermasalah?',
-        answer:
-            'Periksa koneksi, lalu gunakan Coba lagi atau muat ulang halaman. Jika akses sudah tidak aktif, hubungi Guru. Gunakan Ganti pengguna untuk keluar atau memilih peran lain.',
-        keywords: 'akun koneksi akses ganti pengguna keluar',
-      ),
-    ],
+    topics: studentHelpTopics,
   );
 }

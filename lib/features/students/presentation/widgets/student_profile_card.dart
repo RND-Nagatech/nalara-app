@@ -2,17 +2,20 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/nalara_card_style.dart';
+import '../../../../shared/widgets/nalara_avatar.dart';
 import '../../domain/entities/student.dart';
 import 'student_detail_style.dart';
 
 class StudentProfileCard extends StatelessWidget {
   final Student student;
   final VoidCallback? onEdit;
+  final VoidCallback? onEditAvatar;
   final bool showInternalNotes;
   const StudentProfileCard({
     super.key,
     required this.student,
     required this.onEdit,
+    this.onEditAvatar,
     this.showInternalNotes = true,
   });
 
@@ -53,15 +56,29 @@ class StudentProfileCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          student.name,
-                          style: const TextStyle(
-                            fontFamily: 'NalaraInter',
-                            fontSize: 20,
-                            height: 1.3,
-                            fontWeight: FontWeight.w700,
-                            color: StudentDetailStyle.ink,
-                          ),
+                        Row(
+                          children: [
+                            if (student.avatarId != null ||
+                                onEditAvatar != null) ...[
+                              NalaraAvatar(
+                                name: student.name,
+                                avatarId: student.avatarId,
+                              ),
+                              const SizedBox(width: 12),
+                            ],
+                            Expanded(
+                              child: Text(
+                                student.name,
+                                style: const TextStyle(
+                                  fontFamily: 'NalaraInter',
+                                  fontSize: 20,
+                                  height: 1.3,
+                                  fontWeight: FontWeight.w700,
+                                  color: StudentDetailStyle.ink,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Align(
@@ -138,6 +155,16 @@ class StudentProfileCard extends StatelessWidget {
               );
             },
           ),
+          if (onEditAvatar != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: OutlinedButton.icon(
+                key: const ValueKey('student-edit-avatar'),
+                onPressed: onEditAvatar,
+                icon: const Icon(Icons.edit_outlined, size: 17),
+                label: const Text('Edit foto profil'),
+              ),
+            ),
           if (onEdit != null) ...[
             const Divider(height: 1, color: Color(0xFFF0EDE7)),
             Padding(

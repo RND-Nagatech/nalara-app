@@ -16,6 +16,7 @@ Future<void> initializeInstallation(FlutterSecureStorage storage) async {
       'portal-refresh',
       'onboarding',
       'selected-role',
+      'notification-permission-prompt-v1',
     ]) {
       await storage.delete(key: key);
     }

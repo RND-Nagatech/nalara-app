@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/form_widgets.dart';
 import '../widgets/settings_header.dart';
 import '../widgets/settings_style.dart';
+import '../widgets/teacher_timezone_preference.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -85,16 +86,7 @@ class SettingsPage extends StatelessWidget {
               value: 'Bahasa Indonesia',
             ),
             Divider(height: 30, color: SettingsStyle.line),
-            SettingsInfoRow(
-              key: ValueKey('settings-time'),
-              label: 'Tampilan waktu',
-              value: 'WIB · Asia/Jakarta',
-            ),
-            SizedBox(height: 14),
-            Text(
-              'Acuan waktu default aplikasi. Jadwal mengikuti zona waktu yang dipilih saat dibuat.',
-              style: SettingsStyle.body,
-            ),
+            TeacherTimezonePreference(),
           ],
         ),
         SettingsSectionCard(

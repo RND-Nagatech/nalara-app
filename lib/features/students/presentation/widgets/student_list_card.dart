@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/form_widgets.dart';
+import '../../../../shared/widgets/nalara_avatar.dart';
 import '../../domain/entities/student.dart';
 import 'student_list_progress_bar.dart';
 import 'students_style.dart';
@@ -33,12 +34,12 @@ class StudentListCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.zero,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 14, 22),
+          padding: StudentsStyle.listRowPadding,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _avatar(context),
-              const SizedBox(width: 14),
+              _avatar(),
+              const SizedBox(width: StudentsStyle.listAvatarGap),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -51,8 +52,8 @@ class StudentListCard extends StatelessWidget {
                             student.name,
                             style: const TextStyle(
                               fontFamily: 'NalaraInter',
-                              fontSize: 17,
-                              height: 1.3,
+                              fontSize: 16,
+                              height: 1.25,
                               fontWeight: FontWeight.w700,
                               color: StudentsStyle.ink,
                             ),
@@ -62,7 +63,7 @@ class StudentListCard extends StatelessWidget {
                         const ExcludeSemantics(
                           child: Icon(
                             Icons.chevron_right_rounded,
-                            size: 25,
+                            size: 20,
                             color: StudentsStyle.ink,
                           ),
                         ),
@@ -72,6 +73,8 @@ class StudentListCard extends StatelessWidget {
                     Text(
                       subtitle,
                       style: StudentsStyle.body.copyWith(
+                        fontSize: 12.5,
+                        height: 1.35,
                         color: const Color(0xFF697066),
                       ),
                     ),
@@ -98,7 +101,7 @@ class StudentListCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Wrap(
                       spacing: 6,
                       runSpacing: 2,
@@ -107,7 +110,8 @@ class StudentListCard extends StatelessWidget {
                         Text(
                           progressMessage,
                           style: StudentsStyle.body.copyWith(
-                            fontSize: 12.5,
+                            fontSize: 11.5,
+                            height: 1.4,
                             color: const Color(0xFF697066),
                           ),
                         ),
@@ -116,16 +120,15 @@ class StudentListCard extends StatelessWidget {
                             '$progress%',
                             key: ValueKey('student-progress-${student.id}'),
                             style: StudentsStyle.body.copyWith(
-                              fontSize: 13,
+                              fontSize: 12,
+                              height: 1.4,
                               fontWeight: FontWeight.w700,
-                              color: progress < 50
-                                  ? const Color(0xFFA75B24)
-                                  : StudentsStyle.green,
+                              color: StudentsStyle.green,
                             ),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 6),
                     StudentListProgressBar(
                       key: ValueKey('student-progress-bar-${student.id}'),
                       progress: progress,
@@ -141,14 +144,8 @@ class StudentListCard extends StatelessWidget {
     );
   }
 
-  Widget _avatar(BuildContext context) {
-    final words = student.name.trim().split(RegExp(r'\s+'));
-    final initials = words.first.isEmpty
-        ? ''
-        : '${words.first.characters.first}${words.length > 1 ? words.last.characters.first : ''}'
-              .toUpperCase();
-    final scale = MediaQuery.textScalerOf(context).scale(20) / 20;
-    final size = 56.0 * scale.clamp(1, 1.5);
+  Widget _avatar() {
+    const size = StudentsStyle.listAvatarSize;
     return ExcludeSemantics(
       child: Container(
         key: ValueKey('student-avatar-${student.id}'),
@@ -160,23 +157,12 @@ class StudentListCard extends StatelessWidget {
           border: Border.all(color: const Color(0xFFF2F3E9), width: 3),
         ),
         alignment: Alignment.center,
-        child: initials.isEmpty
-            ? const Icon(Icons.person_outline, color: StudentsStyle.green)
-            : FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      fontFamily: 'NalaraLora',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: StudentsStyle.green,
-                    ),
-                  ),
-                ),
-              ),
+        child: NalaraAvatar(
+          name: student.name,
+          avatarId: student.avatarId,
+          size: size - 6,
+          backgroundColor: const Color(0xFFE4ECDD),
+        ),
       ),
     );
   }

@@ -14,67 +14,66 @@ class LoginHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final topInset = MediaQuery.paddingOf(context).top;
-      final height = (constraints.maxWidth * 0.86).clamp(260.0, 360.0);
-      return SizedBox(
-        key: const ValueKey('auth-login-header'),
-        height: height + topInset,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/Login/Login.png',
-              key: const ValueKey('auth-login-header-art'),
-              fit: BoxFit.cover,
-              semanticLabel:
-                  'NALARA. Selamat datang kembali. Masuk untuk melanjutkan perjalanan belajar.',
+  Widget build(BuildContext context) => SafeArea(
+    key: const ValueKey('auth-login-header'),
+    bottom: false,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(28, 10, 28, 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Image.asset(
+            'assets/Logo/LOGO.png',
+            key: const ValueKey('auth-login-logo'),
+            width: 198,
+            height: 132,
+            fit: BoxFit.contain,
+            semanticLabel: 'NALARA',
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Selamat datang kembali',
+            key: ValueKey('auth-login-title'),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'NalaraLora',
+              fontSize: 27,
+              height: 1.2,
+              fontWeight: FontWeight.w600,
+              color: AuthPalette.green,
             ),
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 64,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0x00F5F2E9), AuthPalette.cream],
-                    ),
-                  ),
-                ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Masuk untuk melanjutkan\nperjalanan belajar.',
+            key: ValueKey('auth-login-subtitle'),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              height: 1.45,
+              color: AuthPalette.muted,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _tab(
+                'Email',
+                selected: !usePhone,
+                onPressed: enabled ? () => onChanged(false) : null,
               ),
-            ),
-            SafeArea(
-              bottom: false,
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: Row(
-                    children: [
-                      _tab(
-                        'Email',
-                        selected: !usePhone,
-                        onPressed: enabled ? () => onChanged(false) : null,
-                      ),
-                      _tab(
-                        'Nomor HP',
-                        selected: usePhone,
-                        onPressed: enabled ? () => onChanged(true) : null,
-                      ),
-                    ],
-                  ),
-                ),
+              _tab(
+                'Nomor HP',
+                selected: usePhone,
+                onPressed: enabled ? () => onChanged(true) : null,
               ),
-            ),
-          ],
-        ),
-      );
-    },
+            ],
+          ),
+        ],
+      ),
+    ),
   );
 
   Widget _tab(
@@ -87,11 +86,10 @@ class LoginHeader extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            height: 48,
-            width: double.infinity,
-            child: Align(
-              alignment: Alignment.bottomCenter,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: SizedBox(
+              width: double.infinity,
               child: PlainTextAction(
                 key: ValueKey('auth-login-tab-$label'),
                 label: label,

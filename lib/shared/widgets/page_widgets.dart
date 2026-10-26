@@ -139,21 +139,26 @@ class _AsyncPageState<T> extends State<AsyncPage<T>>
 class PagedListPage<T> extends StatefulWidget {
   final String title, empty;
   final String? emptyArtwork;
+  final bool Function(T item)? itemFilter;
   final Future<PageResult<T>> Function(int) load;
   final Widget Function(BuildContext, T, VoidCallback) itemBuilder;
   final List<Widget> Function(VoidCallback)? controls;
   final String? newRoute;
-  final bool refreshOnCatalogChange;
+  final bool refreshOnCatalogChange, showFloatingActionButton;
+  final double emptyVerticalOffset;
   const PagedListPage({
     super.key,
     required this.title,
     required this.empty,
     this.emptyArtwork,
+    this.itemFilter,
     required this.load,
     required this.itemBuilder,
     this.controls,
     this.newRoute,
     this.refreshOnCatalogChange = false,
+    this.showFloatingActionButton = true,
+    this.emptyVerticalOffset = 0,
   });
   @override
   State<PagedListPage<T>> createState() => _PagedListPageState<T>();
@@ -164,9 +169,13 @@ class _PagedListPageState<T> extends State<PagedListPage<T>>
   int page = 1;
   late final LoadCubit<PageResult<T>> cubit = LoadCubit<PageResult<T>>(
     () => widget.load(page),
-    isEmpty: (value) => value.items.isEmpty,
+    isEmpty: (value) => _visibleItems(value).isEmpty,
     append: appendPage,
   )..load();
+
+  List<T> _visibleItems(PageResult<T> result) => result.items
+      .where(widget.itemFilter ?? (_) => true)
+      .toList(growable: false);
   @override
   void onTeachingCatalogChanged() {
     if (widget.refreshOnCatalogChange) _refresh();
@@ -191,7 +200,8 @@ class _PagedListPageState<T> extends State<PagedListPage<T>>
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: NalaraColors.cream,
-    floatingActionButton: widget.newRoute == null
+    floatingActionButton:
+        widget.newRoute == null || !widget.showFloatingActionButton
         ? null
         : FloatingActionButton.extended(
             heroTag: 'nalara-paged-list-${widget.newRoute ?? widget.title}',
@@ -226,6 +236,9 @@ class _PagedListPageState<T> extends State<PagedListPage<T>>
                 BlocBuilder<LoadCubit<PageResult<T>>, LoadState<PageResult<T>>>(
                   bloc: cubit,
                   builder: (context, state) {
+                    final visibleItems = state.value == null
+                        ? <T>[]
+                        : _visibleItems(state.value!);
                     if (state.status == LoadStatus.error) {
                       return ErrorNotice(state.error!, retry: _refresh);
                     }
@@ -236,7 +249,9 @@ class _PagedListPageState<T> extends State<PagedListPage<T>>
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 1000),
                           child: CustomScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
+                            physics: state.status == LoadStatus.empty
+                                ? const NeverScrollableScrollPhysics()
+                                : const AlwaysScrollableScrollPhysics(),
                             slivers: [
                               SliverPadding(
                                 padding: const EdgeInsets.fromLTRB(
@@ -260,17 +275,33 @@ class _PagedListPageState<T> extends State<PagedListPage<T>>
                               if (state.status == LoadStatus.empty)
                                 SliverFillRemaining(
                                   hasScrollBody: false,
-                                  child: EmptyNotice(
-                                    widget.empty,
-                                    imagePath: widget.emptyArtwork,
-                                    action: widget.newRoute == null
-                                        ? null
-                                        : FilledButton(
-                                            onPressed: add,
-                                            child: const Text(
-                                              'Tambah sekarang',
+                                  child: Transform.translate(
+                                    offset: Offset(
+                                      0,
+                                      widget.emptyVerticalOffset,
+                                    ),
+                                    child: EmptyNotice(
+                                      widget.empty,
+                                      imagePath: widget.emptyArtwork,
+                                      action: state.value?.hasNext == true
+                                          ? FilledButton(
+                                              onPressed: () {
+                                                page++;
+                                                cubit.load(append: true);
+                                              },
+                                              child: const Text(
+                                                'Muat lebih banyak',
+                                              ),
+                                            )
+                                          : widget.newRoute == null
+                                          ? null
+                                          : FilledButton(
+                                              onPressed: add,
+                                              child: const Text(
+                                                'Tambah sekarang',
+                                              ),
                                             ),
-                                          ),
+                                    ),
                                   ),
                                 )
                               else if (state.value != null)
@@ -279,11 +310,11 @@ class _PagedListPageState<T> extends State<PagedListPage<T>>
                                     horizontal: 20,
                                   ),
                                   sliver: SliverList.builder(
-                                    itemCount: state.value!.items.length,
+                                    itemCount: visibleItems.length,
                                     itemBuilder: (context, index) =>
                                         widget.itemBuilder(
                                           context,
-                                          state.value!.items[index],
+                                          visibleItems[index],
                                           cubit.load,
                                         ),
                                   ),
@@ -326,11 +357,13 @@ class SubmitButton extends StatelessWidget {
   final SubmitCubit cubit;
   final String label;
   final VoidCallback onPressed;
+  final bool enabled;
   const SubmitButton({
     super.key,
     required this.cubit,
     required this.onPressed,
     this.label = 'Simpan',
+    this.enabled = true,
   });
   @override
   Widget build(BuildContext context) => BlocBuilder<SubmitCubit, SubmitState>(
@@ -347,7 +380,7 @@ class SubmitButton extends StatelessWidget {
             ),
           ),
         FilledButton(
-          onPressed: state.busy ? null : onPressed,
+          onPressed: state.busy || !enabled ? null : onPressed,
           child: state.busy
               ? const SizedBox(
                   width: 22,

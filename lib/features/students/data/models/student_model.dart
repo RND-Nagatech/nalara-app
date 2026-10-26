@@ -11,6 +11,7 @@ class StudentModel {
     notes: json['notes'] ?? '',
     status: json['status'],
     familyId: json['familyId'],
+    avatarId: json['avatarId'] as String?,
     learningSummary: json['learningSummary'] == null
         ? null
         : _learningSummary(Map<String, dynamic>.from(json['learningSummary'])),

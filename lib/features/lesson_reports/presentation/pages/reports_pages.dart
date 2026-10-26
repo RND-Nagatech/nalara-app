@@ -19,11 +19,12 @@ import '../../../../utils/injector.dart';
 import '../../../../utils/validators.dart';
 import '../../domain/entities/lesson_report.dart';
 import '../../domain/repositories/reports_repository.dart';
+import '../../domain/usecases/load_report_form.dart';
 import '../../../schedules/domain/entities/lesson.dart';
+import '../../../schedules/presentation/widgets/session_participant_picker.dart';
 import '../../../schedules/domain/repositories/schedules_repository.dart';
 import '../../../schedules/presentation/pages/schedules_pages.dart';
-import '../../../learning_goals/domain/entities/learning_goal.dart';
-import '../../../learning_goals/domain/repositories/learning_repository.dart';
+import '../../../schedules/domain/usecases/load_session_overview.dart';
 import '../../../students/domain/repositories/students_repository.dart';
 import '../widgets/report_detail_content.dart';
 import '../widgets/report_detail_style.dart';
@@ -38,6 +39,7 @@ const _reportStatusLabels = ['Semua', 'Draft', 'Terbit'];
 class ReportsPage extends StatefulWidget {
   final String? subtitle;
   final String? studentId;
+  final String? initialStatus;
   final Future<PageResult<LessonReport>> Function(int page, String? studentId)?
   loadReports;
   final bool readOnly;
@@ -45,6 +47,7 @@ class ReportsPage extends StatefulWidget {
   const ReportsPage({
     super.key,
     this.studentId,
+    this.initialStatus,
     this.loadReports,
     this.readOnly = false,
     this.routePrefix = '/teacher',
@@ -65,12 +68,20 @@ class _ReportsPageState extends State<ReportsPage>
       widget.readOnly ? const ['published'] : _reportStatuses;
   List<String> get _statusLabels =>
       widget.readOnly ? const ['Terbit'] : _reportStatusLabels;
+  int get _initialIndex {
+    final index = _statuses.indexOf(widget.initialStatus);
+    return index < 0 ? 0 : index;
+  }
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: _statuses.length, vsync: this)
-      ..addListener(_tabChanged);
+    _activeIndex = _initialIndex;
+    _tabs = TabController(
+      length: _statuses.length,
+      initialIndex: _activeIndex,
+      vsync: this,
+    )..addListener(_tabChanged);
     _bindLoaders();
   }
 
@@ -154,6 +165,10 @@ class _ReportsPageState extends State<ReportsPage>
           ..addListener(_tabChanged);
       }
       _bindLoaders();
+    }
+    if (oldWidget.initialStatus != widget.initialStatus &&
+        _tabs.index != _initialIndex) {
+      _tabs.index = _initialIndex;
     }
   }
 
@@ -428,40 +443,20 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
   }
 }
 
-typedef ReportFormData = ({
-  Lesson lesson,
-  LessonReport? report,
-  List<LearningTarget> targets,
-});
-
 class ReportFormPage extends StatelessWidget {
   final String? sessionId, reportId;
-  const ReportFormPage({super.key, this.sessionId, this.reportId});
-  Future<ReportFormData> load() async {
-    final report = reportId == null
-        ? null
-        : await getIt<ReportsRepository>().get(reportId!);
-    final lesson = await getIt<SchedulesRepository>().session(
-      report?.sessionId ?? sessionId!,
-    );
-    final targets = <LearningTarget>[];
-    var page = 1;
-    while (true) {
-      final plans = await getIt<LearningRepository>().plans(
-        page: page,
-        studentId: lesson.studentId,
-      );
-      for (final plan in plans.items.where(
-        (p) => p.subjectId == lesson.subjectId,
-      )) {
-        final detail = await getIt<LearningRepository>().plan(plan.id);
-        targets.addAll(detail.targets);
-      }
-      if (!plans.hasNext) break;
-      page++;
-    }
-    return (lesson: lesson, report: report, targets: targets);
-  }
+  final List<String> sessionIds;
+  const ReportFormPage({
+    super.key,
+    this.sessionId,
+    this.reportId,
+    this.sessionIds = const [],
+  });
+  Future<ReportFormData> load() => getIt<LoadReportForm>()(
+    sessionId: sessionId,
+    reportId: reportId,
+    sessionIds: sessionIds,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -469,29 +464,45 @@ class ReportFormPage extends StatelessWidget {
       return PagedListPage<Lesson>(
         title: 'Pilih sesi untuk laporan',
         empty: 'Belum ada sesi. Tambahkan jadwal terlebih dahulu.',
-        emptyArtwork: 'assets/Empty/Jadwal kosong.png',
+        emptyArtwork: 'assets/Icon/Icon les hari ini.png',
         newRoute: '/teacher/schedule/new',
+        showFloatingActionButton: false,
+        emptyVerticalOffset: -24,
+        itemFilter: (lesson) => lesson.status != 'cancelled',
         load: (page) => getIt<SchedulesRepository>().sessions(page: page),
-        itemBuilder: (context, lesson, reload) => lesson.status == 'cancelled'
-            ? const SizedBox.shrink()
-            : LessonCard(
-                lesson: lesson,
-                onTap: () async {
-                  await context.push(
-                    '/teacher/reports/new?sessionId=${lesson.id}',
-                  );
-                  reload();
-                },
-              ),
+        itemBuilder: (context, lesson, reload) => LessonCard(
+          lesson: lesson,
+          onTap: () async {
+            try {
+              final overview = await getIt<LoadSessionOverview>()(lesson.id);
+              if (!context.mounted) return;
+              final ids = await chooseReportSessions(
+                context,
+                overview.lesson,
+                existingSessionIds: overview.reports
+                    .map((r) => r.sessionId)
+                    .toSet(),
+              );
+              if (!context.mounted || ids == null || ids.isEmpty) return;
+              await context.push(reportFormLocation(ids));
+              if (context.mounted) reload();
+            } catch (error) {
+              if (context.mounted) {
+                errorMessage(context, error.toString());
+              }
+            }
+          },
+        ),
       );
     }
     return AsyncPage<ReportFormData>(
+      key: ValueKey((sessionId, reportId, sessionIds.join(','))),
       title: reportId == null ? 'Tulis laporan sesi' : 'Edit draft laporan',
       load: load,
       builder: (context, data, _) => _ReportEditor(
         lesson: data.lesson,
         report: data.report,
-        targets: data.targets,
+        recipients: data.recipients,
       ),
     );
   }
@@ -500,11 +511,11 @@ class ReportFormPage extends StatelessWidget {
 class _ReportEditor extends StatefulWidget {
   final Lesson lesson;
   final LessonReport? report;
-  final List<LearningTarget> targets;
+  final List<ReportRecipient> recipients;
   const _ReportEditor({
     required this.lesson,
     this.report,
-    required this.targets,
+    required this.recipients,
   });
   @override
   State<_ReportEditor> createState() => _ReportEditorState();
@@ -522,6 +533,84 @@ class _ReportEditorState extends State<_ReportEditor> {
       );
   late String visibility = widget.report?.visibility ?? 'teacher';
   late final selected = <String>{...?widget.report?.targetIds};
+  bool _confirming = false, _saved = false;
+
+  Future<void> _save({bool publish = false}) async {
+    if (_saved ||
+        _confirming ||
+        submit.state.busy ||
+        !form.currentState!.validate()) {
+      return;
+    }
+    // Capture a complete immutable submission before showing confirmation.
+    final draft = ReportDraft(
+      topic: topic.text,
+      summary: summary.text,
+      observations: observations.text,
+      difficulties: difficulties.text,
+      homework: homework.text,
+      recommendation: recommendation.text,
+      visibility: visibility,
+      targetIds: selected.toList(),
+    );
+    final entries = {
+      for (final recipient in widget.recipients)
+        recipient.sessionId: recipient.targets
+            .where((target) => selected.contains(target.id))
+            .map((target) => target.id)
+            .toList(),
+    };
+    if (publish) {
+      setState(() => _confirming = true);
+      final audience = visibility == 'teacher'
+          ? 'Laporan hanya tersimpan untuk Guru, tidak dikirim ke siswa/Orang Tua.'
+          : visibility == 'student'
+          ? 'Laporan dikirim hanya ke masing-masing siswa, bukan Orang Tua.'
+          : 'Laporan dikirim ke masing-masing siswa dan Orang Tua yang terhubung.';
+      final confirmed = await confirmAction(
+        context,
+        'Terbitkan laporan untuk ${entries.length} siswa? $audience Laporan terbit tidak dapat diubah.',
+      );
+      if (!mounted) return;
+      setState(() => _confirming = false);
+      if (!confirmed) return;
+    }
+    List<LessonReport> saved = [];
+    final ok = await submit.run(() async {
+      final repository = getIt<ReportsRepository>();
+      if (widget.report != null) {
+        await repository.update(widget.report!, draft);
+        saved = [widget.report!];
+      } else if (entries.length > 1 || publish) {
+        saved = await repository.createBatch(
+          widget.lesson.id,
+          draft,
+          targetsBySession: entries,
+          publish: publish,
+        );
+      } else {
+        saved = [
+          await repository.create(widget.recipients.single.sessionId, draft),
+        ];
+      }
+      // Lock successful submissions even if the form is still on the stack.
+      _saved = true;
+    });
+    if (!ok || !mounted) return;
+    successMessage(
+      context,
+      publish
+          ? '${saved.length} laporan diterbitkan'
+          : '${saved.length} laporan disimpan sebagai draf. Belum dibagikan; tinjau dan terbitkan sesuai visibilitas.',
+    );
+    finishForm(
+      context,
+      saved.length == 1
+          ? '/teacher/reports/${saved.single.id}'
+          : '/teacher/reports',
+    );
+  }
+
   @override
   void dispose() {
     for (final controller in [
@@ -553,150 +642,181 @@ class _ReportEditorState extends State<_ReportEditor> {
     ),
   );
   @override
-  Widget build(BuildContext context) => Form(
-    key: form,
-    child: PageBody(
-      children: [
-        DetailRow(
-          'Waktu sesi',
-          '${DateTimeUtils.full(widget.lesson.startAt)} – ${DateTimeUtils.time(widget.lesson.endAt)}',
-        ),
-        OutlinedButton(
-          onPressed: () async {
-            final template = await context.push<ReportTemplate>(
-              '/teacher/templates?select=1',
-            );
-            if (template == null || !context.mounted) return;
-            final replace = await confirmAction(
-              context,
-              'Gunakan template "${template.name}"? Isi topik dan catatan saat ini akan diganti.',
-            );
-            if (!replace || !mounted) return;
-            topic.text = template.topic;
-            summary.text = template.summary;
-            observations.text = template.observations;
-            difficulties.text = template.difficulties;
-            homework.text = template.homework;
-            recommendation.text = template.recommendation;
-          },
-          child: const Text('Gunakan template laporan · Pro'),
-        ),
-        const SizedBox(height: 16),
-        field(topic, 'Materi / topik', required: true, maxLength: 200),
-        field(summary, 'Ringkasan kegiatan', required: true, maxLength: 5000),
-        const SectionTitle('Target yang dievaluasi'),
-        if (widget.targets.isEmpty)
-          const Text('Belum ada target untuk bidang belajar sesi ini.'),
-        ...widget.targets.map(
-          (target) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: NalaraSurfaceCard(
-              key: ValueKey(target.id),
-              padding: const EdgeInsets.fromLTRB(10, 10, 14, 10),
-              onTap: () => setState(() {
-                if (!selected.add(target.id)) selected.remove(target.id);
-              }),
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: selected.contains(target.id),
-                    onChanged: (value) => setState(() {
-                      if (value == true) {
-                        selected.add(target.id);
-                      } else {
-                        selected.remove(target.id);
-                      }
-                    }),
+  Widget build(BuildContext context) => BlocBuilder<SubmitCubit, SubmitState>(
+    bloc: submit,
+    builder: (context, state) => AbsorbPointer(
+      absorbing: state.busy || _confirming || _saved,
+      child: Form(
+        key: form,
+        child: PageBody(
+          children: [
+            DetailRow(
+              'Waktu sesi',
+              '${DateTimeUtils.full(widget.lesson.startAt)} – ${DateTimeUtils.time(widget.lesson.endAt)}',
+            ),
+            DetailRow(
+              'Siswa penerima',
+              widget.recipients.map((r) => r.studentName).join(', '),
+            ),
+            if (widget.recipients.length > 1) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Isi laporan yang sama akan diterapkan ke ${widget.recipients.length} siswa. Target evaluasi dipilih terpisah untuk tiap siswa.',
+              ),
+              const SizedBox(height: 12),
+            ],
+            OutlinedButton(
+              onPressed: () async {
+                final template = await context.push<ReportTemplate>(
+                  '/teacher/templates?select=1',
+                );
+                if (template == null || !context.mounted) return;
+                final replace = await confirmAction(
+                  context,
+                  'Gunakan template "${template.name}"? Isi topik dan catatan saat ini akan diganti.',
+                );
+                if (!replace || !mounted) return;
+                topic.text = template.topic;
+                summary.text = template.summary;
+                observations.text = template.observations;
+                difficulties.text = template.difficulties;
+                homework.text = template.homework;
+                recommendation.text = template.recommendation;
+              },
+              child: const Text('Gunakan template laporan · Pro'),
+            ),
+            const SizedBox(height: 16),
+            field(topic, 'Materi / topik', required: true, maxLength: 200),
+            field(
+              summary,
+              'Ringkasan kegiatan',
+              required: true,
+              maxLength: 5000,
+            ),
+            const SectionTitle('Target yang dievaluasi'),
+            for (final recipient in widget.recipients) ...[
+              if (widget.recipients.length > 1)
+                SectionTitle(recipient.studentName),
+              if (recipient.targets.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Belum ada target untuk bidang belajar sesi ini.',
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ...recipient.targets.map(
+                (target) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: NalaraSurfaceCard(
+                    key: ValueKey(target.id),
+                    padding: const EdgeInsets.fromLTRB(10, 10, 14, 10),
+                    onTap: () => setState(() {
+                      if (!selected.add(target.id)) selected.remove(target.id);
+                    }),
+                    child: Row(
                       children: [
-                        Text(
-                          target.title,
-                          style: const TextStyle(
-                            fontFamily: 'NalaraInter',
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E292D),
-                          ),
+                        Checkbox(
+                          value: selected.contains(target.id),
+                          onChanged: (value) => setState(() {
+                            if (value == true) {
+                              selected.add(target.id);
+                            } else {
+                              selected.remove(target.id);
+                            }
+                          }),
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${target.progress}% · ${statusLabel(target.status)}',
-                          style: const TextStyle(
-                            fontFamily: 'NalaraInter',
-                            fontSize: 12,
-                            color: Color(0xFF7B7F80),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                target.title,
+                                style: const TextStyle(
+                                  fontFamily: 'NalaraInter',
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1E292D),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${target.progress}% · ${statusLabel(target.status)}',
+                                style: const TextStyle(
+                                  fontFamily: 'NalaraInter',
+                                  fontSize: 12,
+                                  color: Color(0xFF7B7F80),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
+            field(observations, 'Perkembangan yang diamati'),
+            field(difficulties, 'Kesulitan yang dialami'),
+            field(homework, 'Tugas / latihan lanjutan'),
+            field(recommendation, 'Rekomendasi sesi berikutnya'),
+            FormFieldSpace(
+              child: NalaraDropdown<String>(
+                value: visibility,
+                decoration: const InputDecoration(
+                  labelText: 'Visibilitas laporan',
+                ),
+                options: ['teacher', 'student', 'shared']
+                    .map(
+                      (value) => NalaraDropdownOption(
+                        value: value,
+                        label: value == 'teacher'
+                            ? 'Hanya Guru'
+                            : value == 'student'
+                            ? 'Hanya Siswa'
+                            : 'Untuk siswa / Orang Tua',
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => visibility = value!),
               ),
             ),
-          ),
+            if (widget.report == null) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  visibility == 'teacher'
+                      ? 'Hanya Guru: laporan tidak dibagikan. Pilih visibilitas siswa atau Orang Tua untuk mengirim laporan.'
+                      : visibility == 'student'
+                      ? 'Saat diterbitkan, laporan dibagikan hanya kepada masing-masing siswa yang dipilih.'
+                      : 'Saat diterbitkan, laporan dibagikan kepada masing-masing siswa dan Orang Tua yang terhubung.',
+                ),
+              ),
+              SubmitButton(
+                cubit: submit,
+                label: visibility == 'teacher'
+                    ? 'Terbitkan ${widget.recipients.length} laporan internal'
+                    : 'Terbitkan & kirim ${widget.recipients.length} laporan',
+                onPressed: () => _save(publish: true),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: state.busy ? null : _save,
+                child: const Text('Simpan draft'),
+              ),
+              const SizedBox(height: 8),
+              const Text('Draft belum dibagikan kepada siswa atau Orang Tua.'),
+            ] else
+              SubmitButton(
+                cubit: submit,
+                label: 'Simpan draft',
+                onPressed: _save,
+              ),
+          ],
         ),
-        const SizedBox(height: 20),
-        field(observations, 'Perkembangan yang diamati'),
-        field(difficulties, 'Kesulitan yang dialami'),
-        field(homework, 'Tugas / latihan lanjutan'),
-        field(recommendation, 'Rekomendasi sesi berikutnya'),
-        FormFieldSpace(
-          child: NalaraDropdown<String>(
-            value: visibility,
-            decoration: const InputDecoration(labelText: 'Visibilitas laporan'),
-            options: ['teacher', 'student', 'shared']
-                .map(
-                  (value) => NalaraDropdownOption(
-                    value: value,
-                    label: value == 'teacher'
-                        ? 'Hanya Guru'
-                        : value == 'student'
-                        ? 'Hanya Siswa'
-                        : 'Untuk siswa / Orang Tua',
-                  ),
-                )
-                .toList(),
-            onChanged: (value) => visibility = value!,
-          ),
-        ),
-        SubmitButton(
-          cubit: submit,
-          label: 'Simpan draft',
-          onPressed: () async {
-            if (!form.currentState!.validate()) return;
-            LessonReport? saved;
-            final ok = await submit.run(() async {
-              final draft = ReportDraft(
-                topic: topic.text,
-                summary: summary.text,
-                observations: observations.text,
-                difficulties: difficulties.text,
-                homework: homework.text,
-                recommendation: recommendation.text,
-                visibility: visibility,
-                targetIds: selected.toList(),
-              );
-              if (widget.report == null) {
-                saved = await getIt<ReportsRepository>().create(
-                  widget.lesson.id,
-                  draft,
-                );
-              } else {
-                await getIt<ReportsRepository>().update(widget.report!, draft);
-                saved = widget.report;
-              }
-            });
-            if (ok && context.mounted) {
-              successMessage(context, 'Draft disimpan');
-              finishForm(context, '/teacher/reports/${saved!.id}');
-            }
-          },
-        ),
-      ],
+      ),
     ),
   );
 }

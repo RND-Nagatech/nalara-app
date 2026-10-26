@@ -8,6 +8,7 @@ class TeacherModel {
     name: json['name'] as String,
     email: json['email'] as String,
     phone: json['phone'] as String?,
+    avatarId: json['avatarId'] as String?,
     workspaceId: json['workspaceId'] as String,
     timezone: json['timezone'] as String? ?? 'Asia/Jakarta',
   );

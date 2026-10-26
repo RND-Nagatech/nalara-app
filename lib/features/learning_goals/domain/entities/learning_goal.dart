@@ -29,6 +29,7 @@ class LearningTarget {
 class LearningPlan {
   final String id, studentId, subjectId, title;
   final String studentName, subjectName;
+  final String? studentAvatarId;
   final DateTime startAt, endAt;
   final int? progress;
   final int targetCount;
@@ -45,6 +46,7 @@ class LearningPlan {
     this.targets = const [],
     this.studentName = '',
     this.subjectName = '',
+    this.studentAvatarId,
   });
 }
 

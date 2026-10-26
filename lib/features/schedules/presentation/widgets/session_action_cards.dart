@@ -9,6 +9,7 @@ class SessionAttendanceCard extends StatefulWidget {
   final String attendance;
   final bool busy;
   final bool readOnly;
+  final String? unavailableReason;
   final ValueChanged<String>? onSave;
 
   const SessionAttendanceCard({
@@ -17,6 +18,7 @@ class SessionAttendanceCard extends StatefulWidget {
     required this.busy,
     required this.onSave,
     this.readOnly = false,
+    this.unavailableReason,
   });
 
   @override
@@ -64,7 +66,8 @@ class _SessionAttendanceCardState extends State<SessionAttendanceCard> {
       : SessionSectionCard(
           title: 'Catat presensi',
           description: widget.attendance == 'pending'
-              ? 'Pilih status kehadiran siswa pada sesi ini.'
+              ? widget.unavailableReason ??
+                    'Pilih status kehadiran siswa pada sesi ini.'
               : 'Presensi sudah disimpan dan dikunci.',
           children: [
             if (widget.attendance != 'pending')
@@ -132,6 +135,7 @@ class SessionReportsCard extends StatelessWidget {
   final List<LessonReport> reports;
   final bool cancelled;
   final bool readOnly;
+  final bool canCreate;
   final VoidCallback? onCreate;
   final ValueChanged<LessonReport>? onOpen;
 
@@ -142,6 +146,7 @@ class SessionReportsCard extends StatelessWidget {
     required this.onCreate,
     required this.onOpen,
     this.readOnly = false,
+    this.canCreate = true,
   });
 
   @override
@@ -154,7 +159,7 @@ class SessionReportsCard extends StatelessWidget {
               : cancelled
               ? 'Belum ada laporan untuk sesi yang dibatalkan ini.'
               : 'Tulis ringkasan materi, catatan, dan perkembangan siswa.',
-          action: !readOnly && !cancelled
+          action: !readOnly && !cancelled && canCreate
               ? FilledButton(
                   key: const ValueKey('session-create-report'),
                   onPressed: onCreate,
@@ -174,9 +179,18 @@ class SessionReportsCard extends StatelessWidget {
                 child: SessionActionTile(
                   key: ValueKey('session-report-${report.id}'),
                   label: report.topic,
-                  description: statusLabel(report.status),
+                  description: [
+                    if (report.studentName.isNotEmpty) report.studentName,
+                    statusLabel(report.status),
+                  ].join(' · '),
                   onPressed: onOpen == null ? null : () => onOpen!(report),
                 ),
+              ),
+            if (!readOnly && !cancelled && canCreate)
+              FilledButton(
+                key: const ValueKey('session-create-report'),
+                onPressed: onCreate,
+                child: const Text('Tulis laporan sesi'),
               ),
           ],
         );

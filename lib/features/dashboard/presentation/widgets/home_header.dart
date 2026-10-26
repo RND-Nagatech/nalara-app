@@ -15,6 +15,7 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => HomeRoleHeader(
     name: data?.teacher.name ?? '',
+    avatarId: data?.teacher.avatarId,
     date: data == null ? 'Beranda Guru' : HomeStyle.date(data!),
     unreadNotifications: data?.unreadNotifications ?? 0,
     onProfile: onProfile,

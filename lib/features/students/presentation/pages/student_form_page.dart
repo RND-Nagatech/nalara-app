@@ -8,6 +8,7 @@ import '../../../../shared/widgets/page_widgets.dart';
 import '../../../../utils/injector.dart';
 import '../../../../utils/validators.dart';
 import '../../../families/presentation/widgets/family_selector.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
 import '../../domain/entities/student.dart';
 import '../../domain/repositories/students_repository.dart';
 import '../widgets/student_form_field.dart';
@@ -162,6 +163,9 @@ class _StudentEditorState extends State<_StudentEditor> {
           : await getIt<StudentsRepository>().update(widget.student!.id, draft);
     });
     if (ok && mounted) {
+      if (widget.student == null) {
+        TeachingTutorialScope.maybeOf(context)?.guide.load();
+      }
       successMessage(context, 'Data siswa disimpan');
       finishForm(context, '/teacher/students/${saved!.id}');
     }
@@ -173,14 +177,17 @@ class _StudentEditorState extends State<_StudentEditor> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        StudentFormField(
-          fieldId: 'name',
-          label: 'Nama siswa',
-          hint: 'Masukkan nama siswa',
-          controller: _name,
-          validator: Validators.name,
-          maxLength: 100,
-          requiredField: true,
+        TutorialTarget(
+          id: widget.student == null ? 'form-student' : 'edit-student',
+          child: StudentFormField(
+            fieldId: 'name',
+            label: 'Nama siswa',
+            hint: 'Masukkan nama siswa',
+            controller: _name,
+            validator: Validators.name,
+            maxLength: 100,
+            requiredField: true,
+          ),
         ),
         StudentFormField(
           fieldId: 'grade',
@@ -207,11 +214,14 @@ class _StudentEditorState extends State<_StudentEditor> {
           }),
         ),
         const SizedBox(height: 4),
-        SubmitButton(
-          key: const ValueKey('student-save'),
-          cubit: _submit,
-          label: widget.student == null ? 'Tambah siswa' : 'Simpan perubahan',
-          onPressed: _save,
+        TutorialTarget(
+          id: widget.student == null ? 'save-student' : 'edit-save-student',
+          child: SubmitButton(
+            key: const ValueKey('student-save'),
+            cubit: _submit,
+            label: widget.student == null ? 'Tambah siswa' : 'Simpan perubahan',
+            onPressed: _save,
+          ),
         ),
       ],
     ),

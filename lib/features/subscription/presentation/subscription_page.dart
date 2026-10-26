@@ -17,12 +17,8 @@ import '../../auth/presentation/bloc/auth_cubit.dart';
 import '../domain/subscription.dart';
 import '../domain/subscription_repository.dart';
 import 'subscription_cubit.dart';
-
-String rupiah(int amount) => NumberFormat.currency(
-  locale: 'id_ID',
-  symbol: 'Rp',
-  decimalDigits: 0,
-).format(amount);
+import 'subscription_format.dart';
+import 'subscription_payment_card.dart';
 
 class SubscriptionStudentsPage extends StatefulWidget {
   const SubscriptionStudentsPage({super.key});
@@ -123,21 +119,43 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     with WidgetsBindingObserver {
   late final _cubit = getIt<SubscriptionCubit>();
   late final _repo = getIt<SubscriptionRepository>();
+  late final _accountGeneration = _cubit.accountGeneration;
+  late final _accountId = _cubit.accountId;
   final _submit = SubmitCubit();
   final List<SubscriptionPayment> _payments = [];
   int _page = 0, _total = 0, _request = 0;
   bool _loadingPayments = false;
   String? _paymentError;
+  Timer? _poll;
+  bool _foreground = true, _synchronizing = false;
+  bool get _currentAccount =>
+      mounted &&
+      _accountId != null &&
+      _cubit.accountId == _accountId &&
+      _cubit.accountGeneration == _accountGeneration;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Only poll while this page is visible, foregrounded and has an open order.
+    _poll = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (_currentAccount &&
+          _foreground &&
+          ModalRoute.of(context)?.isCurrent == true &&
+          !_submit.state.busy &&
+          _payments.any(
+            (payment) => ['creating', 'pending'].contains(payment.status),
+          )) {
+        unawaited(_synchronize());
+      }
+    });
     unawaited(_synchronize());
   }
 
   @override
   void dispose() {
     ++_request;
+    _poll?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _submit.close();
     super.dispose();
@@ -145,18 +163,25 @@ class _SubscriptionPageState extends State<SubscriptionPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
     if (state == AppLifecycleState.resumed) {
       unawaited(_synchronize());
     }
   }
 
   Future<void> _synchronize() async {
-    await _cubit.refresh(synchronizePayment: true);
-    if (mounted) await _loadPayments(reset: true);
+    if (!_currentAccount || _synchronizing) return;
+    _synchronizing = true;
+    try {
+      await _cubit.refresh(synchronizePayment: true);
+      if (_currentAccount) await _loadPayments(reset: true);
+    } finally {
+      _synchronizing = false;
+    }
   }
 
   Future<void> _loadPayments({bool reset = false}) async {
-    if (_loadingPayments && !reset) return;
+    if (!_currentAccount || (_loadingPayments && !reset)) return;
     final request = ++_request;
     setState(() {
       _loadingPayments = true;
@@ -164,7 +189,14 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     });
     try {
       final result = await _repo.payments(reset ? 1 : _page + 1);
-      if (!mounted || request != _request) return;
+      if (!_currentAccount || request != _request) return;
+      // Existing pending checkout links can also be resumed on this device.
+      for (final payment in result.items) {
+        if (['creating', 'pending'].contains(payment.status)) {
+          await _cubit.watchPayment(payment);
+          if (!_currentAccount || request != _request) return;
+        }
+      }
       setState(() {
         if (reset) _payments.clear();
         _payments.addAll(result.items);
@@ -172,17 +204,18 @@ class _SubscriptionPageState extends State<SubscriptionPage>
         _total = result.total;
       });
     } catch (e) {
-      if (mounted && request == _request) {
+      if (_currentAccount && request == _request) {
         setState(() => _paymentError = e.toString());
       }
     } finally {
-      if (mounted && request == _request) {
+      if (_currentAccount && request == _request) {
         setState(() => _loadingPayments = false);
       }
     }
   }
 
   Future<void> _openPayment(SubscriptionPayment payment) async {
+    if (!_currentAccount) return;
     final uri = Uri.tryParse(payment.checkoutUrl ?? '');
     if (uri == null ||
         uri.scheme != 'https' ||
@@ -196,12 +229,54 @@ class _SubscriptionPageState extends State<SubscriptionPage>
       context,
       'Pilih ${plan.name} seharga ${rupiah(plan.price)} untuk satu bulan? Pembayaran dilakukan melalui SingaPay. Sisa masa aktif berbayar sebelumnya tetap diperhitungkan. Perpanjangan dilakukan secara manual.',
     );
-    if (!confirmed || !mounted || _submit.state.busy) return;
+    if (!confirmed || !_currentAccount || _submit.state.busy) return;
     await _submit.run(() async {
-      final payment = await _repo.checkout(plan.id);
-      if (!mounted) return;
-      await _loadPayments(reset: true);
-      if (!payment.paid) await _openPayment(payment);
+      try {
+        final payment = await _repo.checkout(plan.id);
+        if (!_currentAccount) return;
+        await _cubit.watchPayment(payment);
+        if (_currentAccount && payment.canContinue) await _openPayment(payment);
+      } finally {
+        // Failed checkout may still have created a recoverable local order.
+        // Preserve its original backend error while exposing the order/actions.
+        if (_currentAccount) await _loadPayments(reset: true);
+      }
+    });
+  }
+
+  Future<void> _reloadAfterAction() async {
+    if (!_currentAccount) return;
+    // GET the canonical plan even when cancellation lost a race to settlement.
+    await _cubit.refresh();
+    if (_currentAccount) await _loadPayments(reset: true);
+  }
+
+  Future<void> _inspectPayment(SubscriptionPayment payment) =>
+      _submit.run(() async {
+        try {
+          if (!_currentAccount) return;
+          await _cubit.watchPayment(payment);
+          if (!_currentAccount) return;
+          await _repo.refreshPayment(payment.id);
+          if (_currentAccount) await _cubit.refresh(synchronizePayment: true);
+        } finally {
+          await _reloadAfterAction();
+        }
+      });
+
+  Future<void> _cancelPayment(SubscriptionPayment payment) async {
+    if (!_currentAccount || _submit.state.busy) return;
+    final confirmed = await confirmAction(
+      context,
+      'Batalkan order ini? Status pembayaran akan diperiksa terlebih dahulu. Setelah pembatalan berhasil, Anda dapat memilih paket dan membuat order baru.',
+    );
+    if (!confirmed || !_currentAccount || _submit.state.busy) return;
+    await _submit.run(() async {
+      try {
+        await _repo.cancelPayment(payment.id);
+      } finally {
+        await _reloadAfterAction();
+      }
     });
   }
 
@@ -260,6 +335,44 @@ class _SubscriptionPageState extends State<SubscriptionPage>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             _hero(value, state.blocked),
+                            for (final payment
+                                in _payments.where((row) => row.open).take(1))
+                              BlocBuilder<SubmitCubit, SubmitState>(
+                                bloc: _submit,
+                                builder: (context, action) => Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: _surface(
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        const Text(
+                                          'Masih ada order terbuka',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        const Text(
+                                          'Lanjutkan melalui Riwayat pembayaran, atau batalkan order sebelumnya sebelum memilih paket lain.',
+                                          style: TextStyle(
+                                            color: NalaraColors.muted,
+                                            height: 1.6,
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: action.busy
+                                              ? null
+                                              : () => _cancelPayment(payment),
+                                          child: const Text(
+                                            'Batalkan order sebelumnya',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
@@ -681,77 +794,20 @@ class _SubscriptionPageState extends State<SubscriptionPage>
     ),
     child: child,
   );
-  Widget _paymentTile(SubscriptionPayment payment) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: _surface(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            '${payment.plan == 'pro' ? 'Tutor Pro' : 'Tutor Basic'} · ${rupiah(payment.amount)}',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            payment.reference,
-            style: const TextStyle(fontSize: 11, color: NalaraColors.muted),
-          ),
-          Text(
-            payment.paid
-                ? 'Pembayaran berhasil'
-                : payment.status == 'failed'
-                ? 'Pembayaran dibatalkan'
-                : 'Menunggu konfirmasi pembayaran',
-            style: TextStyle(
-              color: payment.paid
-                  ? NalaraColors.green
-                  : const Color(0xFF946B2C),
-              height: 1.8,
-            ),
-          ),
-          if (!payment.paid && payment.status != 'failed')
-            Wrap(
-              spacing: 10,
-              children: [
-                if (payment.checkoutUrl != null)
-                  TextButton(
-                    onPressed: _submit.state.busy
-                        ? null
-                        : () => _submit.run(() => _openPayment(payment)),
-                    child: const Text('Lanjutkan pembayaran'),
-                  ),
-                TextButton(
-                  onPressed: _submit.state.busy
-                      ? null
-                      : () async {
-                          final ok = await _submit.run(() async {
-                            await _repo.refreshPayment(payment.id);
-                            await _cubit.refresh(synchronizePayment: true);
-                          });
-                          if (ok && mounted) await _loadPayments(reset: true);
-                        },
-                  child: const Text('Periksa pembayaran'),
-                ),
-                TextButton(
-                  onPressed: _submit.state.busy
-                      ? null
-                      : () async {
-                          final confirmed = await confirmAction(
-                            context,
-                            'Batalkan tautan pembayaran ini? Paket tidak akan diaktifkan dari tautan yang belum dibayar.',
-                          );
-                          if (!confirmed || !mounted) return;
-                          final ok = await _submit.run(
-                            () => _repo.cancelPayment(payment.id),
-                          );
-                          if (ok && mounted) await _loadPayments(reset: true);
-                        },
-                  child: const Text('Batalkan'),
-                ),
-              ],
-            ),
-        ],
-      ),
-    ),
-  );
+  Widget _paymentTile(SubscriptionPayment payment) =>
+      BlocBuilder<SubmitCubit, SubmitState>(
+        bloc: _submit,
+        builder: (context, action) => SubscriptionPaymentCard(
+          key: ValueKey(payment.id),
+          payment: payment,
+          busy: action.busy,
+          onContinue: () => _submit.run(() async {
+            if (!_currentAccount) return;
+            await _cubit.watchPayment(payment);
+            if (_currentAccount) await _openPayment(payment);
+          }),
+          onRefresh: () => _inspectPayment(payment),
+          onCancel: () => _cancelPayment(payment),
+        ),
+      );
 }

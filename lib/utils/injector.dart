@@ -10,6 +10,12 @@ import '../shared/network/api_client.dart';
 import '../shared/domain/teaching_catalog_changes.dart';
 import '../shared/network/token_store.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
+import '../features/avatars/domain/avatar.dart';
+import '../features/avatars/data/avatars_remote_source.dart';
+import '../features/avatars/data/avatars_repository_impl.dart';
+import '../features/profile/domain/teacher_profile_repository.dart';
+import '../features/profile/data/teacher_profile_remote_source.dart';
+import '../features/profile/data/teacher_profile_repository_impl.dart';
 import '../features/auth/domain/usecases/restore_session.dart';
 import '../features/auth/data/datasources/auth_remote_source.dart';
 import '../features/auth/data/datasources/password_reset_local_source.dart';
@@ -42,6 +48,15 @@ import '../features/subjects/domain/repositories/subjects_repository.dart';
 import '../features/subjects/data/datasources/subjects_remote_source.dart';
 import '../features/subjects/data/repositories/subjects_repository_impl.dart';
 import '../features/schedules/domain/repositories/schedules_repository.dart';
+import '../features/schedules/domain/repositories/schedule_repeat_repository.dart';
+import '../features/schedules/domain/usecases/load_schedule_options.dart';
+import '../features/student_groups/data/student_groups_remote_source.dart';
+import '../features/student_groups/data/student_groups_repository_impl.dart';
+import '../features/student_groups/domain/student_groups_repository.dart';
+import '../features/student_groups/domain/load_student_group_editor.dart';
+import '../features/tuition_fees/domain/tuition_repository.dart';
+import '../features/tuition_fees/data/tuition_remote_source.dart';
+import '../features/tuition_fees/data/tuition_repository_impl.dart';
 import '../features/schedules/domain/usecases/load_schedule_agenda.dart';
 import '../features/schedules/domain/usecases/load_session_overview.dart';
 import '../features/schedules/presentation/bloc/schedule_agenda_cubit.dart';
@@ -54,9 +69,13 @@ import '../features/progress_history/domain/repositories/history_repository.dart
 import '../features/progress_history/data/datasources/history_remote_source.dart';
 import '../features/progress_history/data/repositories/history_repository_impl.dart';
 import '../features/lesson_reports/domain/repositories/reports_repository.dart';
+import '../features/lesson_reports/domain/usecases/load_report_form.dart';
 import '../features/lesson_reports/data/datasources/reports_remote_source.dart';
 import '../features/lesson_reports/data/repositories/reports_repository_impl.dart';
 import '../features/notifications/domain/repositories/notifications_repository.dart';
+import '../features/notifications/domain/repositories/notification_permission_repository.dart';
+import '../features/notifications/data/repositories/notification_permission_repository_impl.dart';
+import '../features/notifications/presentation/bloc/notification_permission_cubit.dart';
 import '../features/notifications/data/datasources/notifications_remote_source.dart';
 import '../features/notifications/data/repositories/notifications_repository_impl.dart';
 import '../features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -78,9 +97,12 @@ import 'constants.dart';
 import '../features/subscription/data/subscription_repository_impl.dart';
 import '../features/subscription/domain/subscription_repository.dart';
 import '../features/subscription/presentation/subscription_cubit.dart';
+import '../features/subscription/data/payment_celebration_local_source.dart';
+import '../features/subscription/domain/payment_celebrations.dart';
 import '../features/tutor_tools/data/tutor_tools_repository_impl.dart';
 import '../features/tutor_tools/domain/tutor_tools.dart';
 import '../features/tutor_tools/domain/load_tutor_catalog.dart';
+import '../features/tutor_tools/domain/load_activity_options.dart';
 import '../features/teaching_guide/data/teaching_guide_remote_source.dart';
 import '../features/teaching_guide/data/teaching_guide_repository_impl.dart';
 import '../features/teaching_guide/domain/teaching_guide.dart';
@@ -136,7 +158,13 @@ Future<void> configureDependencies({bool checkInstallation = true}) async {
     () => SubscriptionRepositoryImpl(getIt<SubscriptionRemoteSource>()),
   );
   getIt.registerLazySingleton(
-    () => SubscriptionCubit(getIt<SubscriptionRepository>()),
+    () => SubscriptionCubit(
+      getIt<SubscriptionRepository>(),
+      celebrations: PaymentCelebrations(
+        getIt<SubscriptionRepository>(),
+        const PaymentCelebrationLocalSource(FlutterSecureStorage()),
+      ),
+    ),
     dispose: (cubit) => cubit.close(),
   );
   getIt.registerLazySingleton(
@@ -167,6 +195,12 @@ Future<void> configureDependencies({bool checkInstallation = true}) async {
     ),
   );
   getIt.registerLazySingleton(
+    () => LoadActivityOptions(
+      getIt<LoadTutorCatalog>(),
+      getIt<StudentGroupsRepository>(),
+    ),
+  );
+  getIt.registerLazySingleton(
     () => TokenStore(const FlutterSecureStorage(), namespace: 'portal-'),
     instanceName: 'portal',
   );
@@ -184,6 +218,34 @@ Future<void> configureDependencies({bool checkInstallation = true}) async {
       portalApi: getIt<ApiClient>(instanceName: 'portal'),
     ),
     dispose: (service) => service.dispose(),
+  );
+  getIt.registerLazySingleton<NotificationPermissionRepository>(
+    () => NotificationPermissionRepositoryImpl(
+      getIt<PushNotificationService>(),
+      const FlutterSecureStorage(),
+    ),
+  );
+  getIt.registerLazySingleton(
+    () =>
+        NotificationPermissionCubit(getIt<NotificationPermissionRepository>()),
+    dispose: (cubit) => cubit.close(),
+  );
+  // Each picker captures the current account's session generation.
+  getIt.registerFactory<TeacherProfileRepository>(
+    () => TeacherProfileRepositoryImpl(
+      TeacherProfileRemoteSource(getIt<ApiClient>()),
+    ),
+  );
+  getIt.registerLazySingleton<ScheduleRepeatRepository>(
+    () => getIt<SchedulesRepository>() as ScheduleRepeatRepository,
+  );
+  getIt.registerFactoryParam<AvatarsRepository, bool, void>(
+    (student, _) => AvatarsRepositoryImpl(
+      AvatarsRemoteSource(
+        student ? getIt<ApiClient>(instanceName: 'portal') : getIt<ApiClient>(),
+        student: student,
+      ),
+    ),
   );
   getIt.registerLazySingleton(
     () => AccessLocalSource(
@@ -308,7 +370,17 @@ Future<void> configureDependencies({bool checkInstallation = true}) async {
   );
   getIt.registerLazySingleton(() => ReportsRemoteSource(getIt<ApiClient>()));
   getIt.registerLazySingleton<ReportsRepository>(
-    () => ReportsRepositoryImpl(getIt<ReportsRemoteSource>()),
+    () => ReportsRepositoryImpl(
+      getIt<ReportsRemoteSource>(),
+      changes: getIt<TeachingCatalogChanges>(),
+    ),
+  );
+  getIt.registerLazySingleton(
+    () => LoadReportForm(
+      getIt<ReportsRepository>(),
+      getIt<SchedulesRepository>(),
+      getIt<LearningRepository>(),
+    ),
   );
   getIt.registerLazySingleton(
     () => LoadSessionOverview(
@@ -384,7 +456,37 @@ Future<void> configureDependencies({bool checkInstallation = true}) async {
       getIt<SubjectsRepository>(),
     ),
   );
+  getIt.registerLazySingleton(
+    () => StudentGroupsRemoteSource(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<StudentGroupsRepository>(
+    () => StudentGroupsRepositoryImpl(getIt<StudentGroupsRemoteSource>()),
+  );
+  getIt.registerLazySingleton(
+    () => LoadStudentGroupEditor(
+      getIt<StudentGroupsRepository>(),
+      getIt<StudentsRepository>(),
+    ),
+  );
+  getIt.registerLazySingleton(
+    () => LoadScheduleOptions(
+      getIt<LoadTeachingOptions>(),
+      getIt<StudentGroupsRepository>(),
+    ),
+  );
   getIt<ApiClient>().onExpired = getIt<AuthCubit>().expire;
+  getIt.registerLazySingleton<TuitionRepository>(
+    () => TuitionRepositoryImpl(TuitionRemoteSource(getIt<ApiClient>())),
+  );
+  getIt.registerLazySingleton<TuitionReader>(
+    () => ParentTuitionReader(
+      TuitionRemoteSource(
+        getIt<ApiClient>(instanceName: 'portal'),
+        parent: true,
+      ),
+    ),
+    instanceName: 'parent',
+  );
   getIt<ApiClient>(instanceName: 'portal').onExpired =
       getIt<AuthCubit>().expirePortal;
 }

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/state/load_cubit.dart';
 import '../../../../shared/state/teaching_catalog_refresh.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
 import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/widgets/nalara_dropdown.dart';
 import '../../../../shared/widgets/page_widgets.dart';
@@ -284,6 +285,7 @@ class _PlanEditorState extends State<_PlanEditor> {
         (router == null || router.state.uri == location);
     if (!visible) return;
     if (ok) {
+      TeachingTutorialScope.maybeOf(context)?.guide.load();
       successMessage(context, 'Rencana dan target disimpan');
       finishForm(context, '/teacher/plans/${plan!.id}');
     } else if (_scroll.hasClients) {
@@ -412,15 +414,18 @@ class _PlanEditorState extends State<_PlanEditor> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const PlanFormLabel('Nama rencana belajar', requiredField: true),
-        TextFormField(
-          key: const ValueKey('plan-name'),
-          controller: _title,
-          enabled: enabled,
-          validator: Validators.name,
-          maxLength: 200,
-          style: PlanFormStyle.supporting.copyWith(color: PlanFormStyle.ink),
-          decoration: const InputDecoration(
-            hintText: 'Masukkan nama rencana belajar',
+        TutorialTarget(
+          id: 'form-target',
+          child: TextFormField(
+            key: const ValueKey('plan-name'),
+            controller: _title,
+            enabled: enabled,
+            validator: Validators.name,
+            maxLength: 200,
+            style: PlanFormStyle.supporting.copyWith(color: PlanFormStyle.ink),
+            decoration: const InputDecoration(
+              hintText: 'Masukkan nama rencana belajar',
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -533,27 +538,30 @@ class _PlanEditorState extends State<_PlanEditor> {
               label: const Text('Tambah target lagi'),
             ),
             const SizedBox(height: 9),
-            FilledButton(
-              key: const ValueKey('plan-save'),
-              onPressed:
-                  enabled &&
-                      _options.students.isNotEmpty &&
-                      _options.subjects.isNotEmpty
-                  ? _save
-                  : null,
-              child: state.busy
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+            TutorialTarget(
+              id: 'save-target',
+              child: FilledButton(
+                key: const ValueKey('plan-save'),
+                onPressed:
+                    enabled &&
+                        _options.students.isNotEmpty &&
+                        _options.subjects.isNotEmpty
+                    ? _save
+                    : null,
+                child: state.busy
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Simpan rencana & target',
+                        textAlign: TextAlign.center,
                       ),
-                    )
-                  : const Text(
-                      'Simpan rencana & target',
-                      textAlign: TextAlign.center,
-                    ),
+              ),
             ),
           ],
         ),

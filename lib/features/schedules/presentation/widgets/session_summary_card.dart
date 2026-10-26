@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/form_widgets.dart';
+import '../../../../shared/widgets/nalara_avatar.dart';
 import '../../../../utils/date_time_utils.dart';
 import '../../domain/entities/session_overview.dart';
 import 'session_detail_style.dart';
@@ -56,9 +57,20 @@ class SessionSummaryCard extends StatelessWidget {
           runSpacing: 14,
           children: [
             _status('Status', lesson.status),
-            _status('Presensi', lesson.attendance),
+            if (!lesson.isGroup) _status('Presensi', lesson.attendance),
           ],
         ),
+        if (lesson.status == 'cancelled') ...[
+          const Divider(height: 28, color: SessionDetailStyle.line),
+          _detail(
+            'Alasan pembatalan',
+            lesson.cancellationReason?.trim().isNotEmpty == true
+                ? lesson.cancellationReason!
+                : lesson.isGroup
+                ? 'Lihat alasan pada masing-masing peserta. Alasan dapat berbeda jika sebelumnya dibatalkan terpisah.'
+                : 'Alasan pembatalan belum dicatat.',
+          ),
+        ],
         if (showSeries) ...[
           const Divider(height: 28, color: SessionDetailStyle.line),
           SessionActionTile(
@@ -84,23 +96,39 @@ class SessionSummaryCard extends StatelessWidget {
         fit: BoxFit.contain,
         excludeFromSemantics: true,
       );
+      if (data.lesson.isGroup) {
+        return Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Sesi kelompok', style: SessionDetailStyle.title),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${data.lesson.participants.length} siswa · ${data.lesson.attendanceSummary}',
+                    style: SessionDetailStyle.body,
+                  ),
+                ],
+              ),
+            ),
+            if (!stacked) artwork,
+          ],
+        );
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 25,
+              NalaraAvatar(
+                size: 50,
+                name: name,
+                avatarId: data.lesson.studentAvatarId,
+                maxInitials: 1,
                 backgroundColor: SessionDetailStyle.sage,
                 foregroundColor: SessionDetailStyle.green,
-                child: Text(
-                  name.isEmpty ? '–' : name.characters.first.toUpperCase(),
-                  style: SessionDetailStyle.title.copyWith(
-                    fontSize: 23,
-                    color: SessionDetailStyle.green,
-                  ),
-                ),
               ),
               const SizedBox(width: 13),
               Expanded(

@@ -16,10 +16,10 @@ class TeachingGuideModel {
     return value;
   }
 
-  bool get dismissed => _flag('dismissed');
+  bool get tutorialSeen => _flag('tutorialSeen');
 
   TeachingGuide toEntity() => TeachingGuide(
-    dismissed: dismissed,
+    tutorialSeen: tutorialSeen,
     hasSubject: _flag('hasSubject'),
     hasStudent: _flag('hasStudent'),
     hasSchedule: _flag('hasSchedule'),

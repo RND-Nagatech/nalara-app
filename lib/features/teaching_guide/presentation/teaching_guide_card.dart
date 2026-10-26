@@ -5,34 +5,19 @@ import '../../../utils/color.dart';
 import '../domain/teaching_guide.dart';
 import 'teaching_guide_copy.dart';
 import 'teaching_guide_cubit.dart';
+import 'teaching_tutorial_scope.dart';
 
+/// Permanent checklist, shown only on the guide page in Lainnya.
 class TeachingGuideCard extends StatelessWidget {
   final TeachingGuideCubit cubit;
   final ValueChanged<String> onOpen;
-  final VoidCallback? onOpenGuide;
-  final bool inHome;
-
+  final ValueChanged<TeachingGuideStep>? onStart;
   const TeachingGuideCard({
     super.key,
     required this.cubit,
     required this.onOpen,
-    this.onOpenGuide,
-    this.inHome = false,
+    this.onStart,
   });
-
-  static const _body = TextStyle(
-    fontFamily: 'NalaraInter',
-    fontSize: 13,
-    height: 1.5,
-    color: NalaraColors.muted,
-  );
-  static const _title = TextStyle(
-    fontFamily: 'NalaraInter',
-    fontSize: 20,
-    height: 1.3,
-    fontWeight: FontWeight.w700,
-    color: NalaraColors.ink,
-  );
 
   @override
   Widget build(
@@ -41,8 +26,6 @@ class TeachingGuideCard extends StatelessWidget {
     bloc: cubit,
     builder: (context, state) {
       final guide = state.value;
-      final compact =
-          inHome && guide != null && (guide.dismissed || guide.isComplete);
       return NalaraSurfaceCard(
         key: const ValueKey('teaching-guide-card'),
         padding: const EdgeInsets.all(20),
@@ -50,158 +33,144 @@ class TeachingGuideCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'LANGKAH AWAL NALARA',
+              'PANDUAN MENGAJAR',
               style: TextStyle(
-                fontFamily: 'NalaraInter',
-                fontSize: 10.5,
+                fontSize: 11,
                 letterSpacing: 1,
-                fontWeight: FontWeight.w700,
                 color: NalaraColors.green,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              guide?.isComplete == true
-                  ? 'Persiapan mengajar selesai'
-                  : compact
-                  ? 'Lanjutkan persiapan mengajar'
-                  : 'Siapkan kegiatan mengajar Anda',
-              style: _title,
-            ),
-            if (guide != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${guide.completedCount} dari ${TeachingGuideStep.values.length} langkah selesai',
-                key: const ValueKey('teaching-guide-progress-label'),
-                style: _body,
-              ),
-              const SizedBox(height: 10),
-              Semantics(
-                label: 'Progres persiapan mengajar',
-                value: '${guide.completedCount} dari 4 langkah',
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    key: const ValueKey('teaching-guide-progress'),
-                    value:
-                        guide.completedCount / TeachingGuideStep.values.length,
-                    minHeight: 6,
-                    color: NalaraColors.green,
-                    backgroundColor: const Color(0xFFE8F1EB),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    guide?.isComplete == true
+                        ? 'Persiapan mengajar selesai'
+                        : 'Mulai dengan langkah kecil',
+                    style: const TextStyle(
+                      fontSize: 21,
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            ],
-            if (state.busy) ...[
-              const SizedBox(height: 14),
-              const LinearProgressIndicator(minHeight: 2),
-              const SizedBox(height: 6),
+                if (guide != null) GuideCountBadge(count: guide.remainingCount),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Ikuti petunjuk langsung di halaman yang Anda gunakan. Panduan yang dilewati dapat dilanjutkan kapan saja dari Lainnya.',
+              style: TextStyle(height: 1.5, color: NalaraColors.muted),
+            ),
+            if (guide != null) ...[
+              const SizedBox(height: 16),
               Text(
-                state.saving
-                    ? 'Menyimpan pilihan…'
-                    : 'Memeriksa persiapan Anda…',
-                style: _body,
+                '${guide.completedCount} dari 4 panduan selesai',
+                key: const ValueKey('teaching-guide-progress-label'),
+              ),
+              const SizedBox(height: 10),
+              LinearProgressIndicator(
+                key: const ValueKey('teaching-guide-progress'),
+                value: guide.completedCount / 4,
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(6),
               ),
             ],
+            if (state.busy)
+              const Padding(
+                padding: EdgeInsets.only(top: 16),
+                child: LinearProgressIndicator(),
+              ),
             if (state.error != null) ...[
-              const SizedBox(height: 12),
-              Semantics(
-                liveRegion: true,
-                child: Text(state.error!, style: _body),
+              const SizedBox(height: 14),
+              Text(
+                state.error!,
+                style: const TextStyle(color: NalaraColors.danger),
               ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  key: const ValueKey('teaching-guide-retry'),
-                  onPressed: state.busy ? null : cubit.load,
-                  child: const Text('Coba lagi'),
-                ),
+              TextButton(
+                onPressed: state.busy ? null : cubit.load,
+                child: const Text('Coba lagi'),
               ),
             ],
-            if (guide != null && compact) ...[
-              const SizedBox(height: 6),
-              TextButton(
-                key: const ValueKey('teaching-guide-open'),
-                onPressed: state.busy ? null : onOpenGuide,
-                child: Text(
-                  guide.isComplete ? 'Lihat panduan' : 'Buka panduan',
-                ),
-              ),
-            ] else if (guide != null) ...[
-              const SizedBox(height: 14),
-              const Text(
-                'Ikuti langkah berikut sesuai kebutuhan Anda. Menu lainnya tetap dapat digunakan.',
-                style: _body,
-              ),
-              const SizedBox(height: 8),
+            if (guide != null) ...[
+              const SizedBox(height: 16),
               for (final step in TeachingGuideStep.values)
-                _GuideStepRow(
-                  key: ValueKey('teaching-guide-step-${step.name}'),
-                  step: step,
-                  completed: guide.completed(step),
-                  current: guide.nextStep == step,
-                  onTap:
-                      !state.busy &&
-                          (guide.completed(step) || guide.nextStep == step)
-                      ? () =>
-                            onOpen(step.route(completed: guide.completed(step)))
-                      : null,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    key: ValueKey('teaching-guide-step-${step.name}'),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    tileColor: const Color(0xFFF0F6F2),
+                    leading: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: guide.completed(step)
+                          ? NalaraColors.green
+                          : const Color(0xFFE1EBE5),
+                      child: guide.completed(step)
+                          ? const Icon(
+                              Icons.check_rounded,
+                              size: 19,
+                              color: Colors.white,
+                            )
+                          : Text(
+                              '${step.index + 1}',
+                              style: const TextStyle(color: NalaraColors.green),
+                            ),
+                    ),
+                    title: Text(
+                      step.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      guide.completed(step)
+                          ? 'Selesai · buka menu'
+                          : guide.canStart(step)
+                          ? 'Belum selesai · mulai panduan'
+                          : 'Siapkan bidang belajar dan siswa terlebih dahulu',
+                      style: const TextStyle(fontSize: 12, height: 1.5),
+                    ),
+                    trailing: guide.completed(step)
+                        ? const Icon(Icons.chevron_right_rounded)
+                        : const GuideCountBadge(count: 1),
+                    onTap: state.busy || !guide.canStart(step)
+                        ? null
+                        : () {
+                            if (guide.completed(step)) {
+                              onOpen(step.route(completed: true));
+                            } else {
+                              onStart?.call(step);
+                            }
+                          },
+                  ),
                 ),
-              const SizedBox(height: 12),
               if (guide.nextStep case final step?)
                 FilledButton(
                   key: const ValueKey('teaching-guide-next'),
-                  onPressed: state.busy
-                      ? null
-                      : () => onOpen(step.route(completed: false)),
-                  child: Text(
-                    'Lanjut: ${step.title}',
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else
-                const Text(
-                  'Anda siap mengajar. Saat sesi berlangsung, buka detail sesi untuk mencatat presensi dan membuat laporan belajar.',
-                  style: _body,
+                  onPressed: state.busy ? null : () => onStart?.call(step),
+                  child: const Text('Lanjutkan panduan'),
                 ),
-              const SizedBox(height: 8),
-              TextButton(
-                key: const ValueKey('teaching-guide-dismiss'),
-                onPressed: state.busy
-                    ? null
-                    : () => cubit.setDismissed(!guide.dismissed),
-                child: Text(
-                  guide.dismissed
-                      ? 'Tampilkan kembali di Beranda'
-                      : inHome
-                      ? 'Lewati sementara'
-                      : 'Ringkas panduan di Beranda',
-                ),
-              ),
-              const Text(
-                'Progres tersimpan melalui data Anda. Panduan dapat dibuka kembali lewat Pusat Bantuan.',
-                style: _body,
-                textAlign: TextAlign.center,
-              ),
-            ],
-            if (!inHome && guide != null) ...[
-              const SizedBox(height: 24),
-              const Divider(height: 1),
-              const SizedBox(height: 20),
-              const Text(
-                'Hubungkan orang tua · Opsional',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: NalaraColors.ink,
-                ),
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 18),
               Text(
                 guide.parentConnected
-                    ? 'Orang tua sudah terhubung ke siswa Anda.'
-                    : 'Kelola keluarga siswa, lalu bagikan kode akses Orang Tua dari detail keluarga. Langkah ini tidak menghalangi persiapan lainnya.',
-                style: _body,
+                    ? 'Orang tua sudah terhubung.'
+                    : 'Hubungkan orang tua · Opsional',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Kelola keluarga siswa, kemudian bagikan kode akses kepada orang tua yang berhak.',
+                style: TextStyle(color: NalaraColors.muted, height: 1.5),
               ),
               const SizedBox(height: 10),
               OutlinedButton(
@@ -216,91 +185,5 @@ class TeachingGuideCard extends StatelessWidget {
         ),
       );
     },
-  );
-}
-
-class _GuideStepRow extends StatelessWidget {
-  final TeachingGuideStep step;
-  final bool completed, current;
-  final VoidCallback? onTap;
-  const _GuideStepRow({
-    super.key,
-    required this.step,
-    required this.completed,
-    required this.current,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    label:
-        '${step.title}, ${completed
-            ? 'selesai'
-            : current
-            ? 'langkah berikutnya'
-            : 'belum selesai'}',
-    button: onTap != null,
-    child: Material(
-      color: current ? const Color(0xFFF0F6F2) : Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: completed
-                      ? NalaraColors.green
-                      : const Color(0xFFE8F1EB),
-                ),
-                child: completed
-                    ? const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      )
-                    : Text(
-                        '${step.index + 1}',
-                        style: const TextStyle(
-                          color: NalaraColors.green,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      step.title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 1.4,
-                        fontWeight: FontWeight.w600,
-                        color: NalaraColors.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      completed ? 'Sudah disiapkan' : step.description,
-                      style: TeachingGuideCard._body,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
   );
 }

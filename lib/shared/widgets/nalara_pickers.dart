@@ -29,7 +29,12 @@ Future<TimeOfDay?> showNalaraTimePicker({
 }) => showTimePicker(
   context: context,
   initialTime: initialTime,
-  initialEntryMode: TimePickerEntryMode.inputOnly,
+  // `inputOnly` opens the keyboard and can leave the Material time picker
+  // with less vertical space than its fixed 216px input minimum on Android.
+  // The framework then receives an invalid constraint such as
+  // `minHeight: 216, maxHeight: 201.6`. Dial-only keeps the picker usable on
+  // short screens and when the system keyboard is visible.
+  initialEntryMode: TimePickerEntryMode.dialOnly,
   helpText: 'Pilih waktu',
   hourLabelText: 'Jam',
   minuteLabelText: 'Menit',

@@ -7,6 +7,8 @@ import 'package:nalara/features/auth/domain/repositories/auth_repository.dart';
 import 'package:nalara/features/auth/presentation/bloc/auth_cubit.dart';
 import 'package:nalara/features/access/domain/entities/app_role.dart';
 import 'package:nalara/utils/injector.dart';
+import 'package:nalara/shared/widgets/nalara_error_notice.dart';
+import 'package:nalara/utils/color.dart';
 
 class FakeAuth implements AuthRepository {
   Teacher? teacher;
@@ -59,6 +61,56 @@ void expectOnboardingPage(WidgetTester tester, int page) {
 }
 
 void main() {
+  testWidgets('offline splash keeps only the rounded error card', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = FakeAuth()
+      ..seen = false
+      ..offline = true;
+    final auth = AuthCubit(repository);
+    await auth.restore();
+    getIt.registerSingleton(auth);
+    final refresh = AuthRouterRefresh(auth);
+    final router = buildRouter(auth, refresh);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    final notice = find.byType(ErrorNotice);
+    expect(notice, findsOneWidget);
+    expect(
+      find.ancestor(of: notice, matching: find.byType(Container)),
+      findsNothing,
+    );
+    final surface = tester.widget<Container>(
+      find.descendant(of: notice, matching: find.byType(Container)),
+    );
+    final decoration = surface.decoration! as BoxDecoration;
+    expect(decoration.color, NalaraColors.errorSurface);
+    expect(decoration.borderRadius, BorderRadius.circular(26));
+    expect(find.textContaining('offline'), findsOneWidget);
+    expectOnboardingPage(tester, 0);
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const ValueKey('onboarding-next')))
+          .onPressed,
+      isNull,
+    );
+
+    repository.offline = false;
+    await tester.tap(find.text('Coba lagi'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ErrorNotice), findsNothing);
+    expect(auth.state.status, AuthStatus.unauthenticated);
+    expectOnboardingPage(tester, 0);
+    await tester.pumpWidget(const SizedBox.shrink());
+    router.dispose();
+    refresh.dispose();
+    await auth.close();
+  });
   testWidgets('full-screen splash leads to role choice before teacher login', (
     tester,
   ) async {

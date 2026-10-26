@@ -7,6 +7,7 @@ import '../../../../shared/widgets/form_widgets.dart';
 import '../../../../shared/state/load_cubit.dart';
 import '../../../../utils/injector.dart';
 import '../../../../utils/validators.dart';
+import '../../../teaching_guide/presentation/teaching_tutorial_scope.dart';
 import '../../domain/entities/subject.dart';
 import '../../domain/repositories/subjects_repository.dart';
 import '../widgets/subject_form_header.dart';
@@ -114,6 +115,9 @@ class _SubjectEditorState extends State<_SubjectEditor> {
       }
     });
     if (ok && mounted) {
+      if (widget.subject == null) {
+        TeachingTutorialScope.maybeOf(context)?.guide.load();
+      }
       successMessage(
         context,
         widget.subject == null
@@ -191,37 +195,48 @@ class _SubjectEditorState extends State<_SubjectEditor> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Semantics(
-                                label: 'Nama bidang belajar, wajib diisi',
-                                child: TextFormField(
-                                  key: const ValueKey('subject-name'),
-                                  controller: name,
-                                  enabled: !state.busy,
-                                  validator: Validators.name,
-                                  maxLength: 100,
-                                  style: const TextStyle(
-                                    fontFamily: 'NalaraInter',
-                                    fontSize: 14,
-                                    height: 1.45,
-                                    color: SubjectFormStyle.ink,
-                                  ),
-                                  textCapitalization: TextCapitalization.words,
-                                  textInputAction: TextInputAction.done,
-                                  onFieldSubmitted: (_) => _save(),
-                                  decoration: const InputDecoration(
-                                    hintText:
-                                        'Contoh: Matematika, Piano, atau Renang',
+                              TutorialTarget(
+                                id: widget.subject == null
+                                    ? 'form-subject'
+                                    : 'edit-subject',
+                                child: Semantics(
+                                  label: 'Nama bidang belajar, wajib diisi',
+                                  child: TextFormField(
+                                    key: const ValueKey('subject-name'),
+                                    controller: name,
+                                    enabled: !state.busy,
+                                    validator: Validators.name,
+                                    maxLength: 100,
+                                    style: const TextStyle(
+                                      fontFamily: 'NalaraInter',
+                                      fontSize: 14,
+                                      height: 1.45,
+                                      color: SubjectFormStyle.ink,
+                                    ),
+                                    textCapitalization:
+                                        TextCapitalization.words,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) => _save(),
+                                    decoration: const InputDecoration(
+                                      hintText:
+                                          'Contoh: Matematika, Piano, atau Renang',
+                                    ),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 28),
-                              SubmitButton(
-                                key: const ValueKey('subject-save'),
-                                cubit: submit,
-                                label: widget.subject == null
-                                    ? 'Simpan'
-                                    : 'Simpan perubahan',
-                                onPressed: _save,
+                              TutorialTarget(
+                                id: widget.subject == null
+                                    ? 'save-subject'
+                                    : 'edit-save-subject',
+                                child: SubmitButton(
+                                  key: const ValueKey('subject-save'),
+                                  cubit: submit,
+                                  label: widget.subject == null
+                                      ? 'Simpan'
+                                      : 'Simpan perubahan',
+                                  onPressed: _save,
+                                ),
                               ),
                             ],
                           ),

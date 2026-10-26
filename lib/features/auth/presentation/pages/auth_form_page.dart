@@ -42,11 +42,24 @@ class _AuthFormPageState extends State<AuthFormPage> {
   bool _rememberMe = true;
   bool _acceptedTerms = false;
   bool _termsError = false;
+  bool _restoringRememberedLogin = false;
 
   @override
   void initState() {
     super.initState();
+    _email.addListener(_onLoginInputChanged);
+    _phone.addListener(_onLoginInputChanged);
+    _password.addListener(_onLoginInputChanged);
     if (!widget.register) unawaited(_restoreRememberedLogin());
+  }
+
+  void _onLoginInputChanged() {
+    if (mounted && !_restoringRememberedLogin) setState(() {});
+  }
+
+  bool get _loginFieldsFilled {
+    final identifier = _usePhone ? _phone.text : _email.text;
+    return identifier.trim().isNotEmpty && _password.text.isNotEmpty;
   }
 
   Future<void> _restoreRememberedLogin() async {
@@ -59,16 +72,21 @@ class _AuthFormPageState extends State<AuthFormPage> {
           _password.text.isNotEmpty) {
         return;
       }
-      setState(() {
-        _usePhone = remembered.method == LoginMethod.phone;
-        if (_usePhone) {
-          _phone.text = remembered.identifier;
-        } else {
-          _email.text = remembered.identifier;
-        }
-        _password.text = remembered.password;
-        _rememberMe = true;
-      });
+      _restoringRememberedLogin = true;
+      try {
+        setState(() {
+          _usePhone = remembered.method == LoginMethod.phone;
+          if (_usePhone) {
+            _phone.text = remembered.identifier;
+          } else {
+            _email.text = remembered.identifier;
+          }
+          _password.text = remembered.password;
+          _rememberMe = true;
+        });
+      } finally {
+        _restoringRememberedLogin = false;
+      }
     } catch (_) {
       // Login remains usable if secure storage cannot be read.
     }
@@ -76,6 +94,9 @@ class _AuthFormPageState extends State<AuthFormPage> {
 
   @override
   void dispose() {
+    _email.removeListener(_onLoginInputChanged);
+    _phone.removeListener(_onLoginInputChanged);
+    _password.removeListener(_onLoginInputChanged);
     _name.dispose();
     _email.dispose();
     _phone.dispose();
@@ -87,6 +108,7 @@ class _AuthFormPageState extends State<AuthFormPage> {
 
   Future<void> _save() async {
     if (_submit.state.busy) return;
+    if (!widget.register && !_loginFieldsFilled) return;
     if (widget.register && !_acceptedTerms) {
       setState(() => _termsError = true);
       return;
@@ -201,7 +223,7 @@ class _AuthFormPageState extends State<AuthFormPage> {
                   child: IgnorePointer(child: RegisterBackdrop()),
                 ),
               SafeArea(
-                // The header artwork continues underneath the top system inset.
+                // Each header owns its top system inset; form content scrolls.
                 top: false,
                 child: BlocConsumer<SubmitCubit, SubmitState>(
                   bloc: _submit,
@@ -435,7 +457,12 @@ class _AuthFormPageState extends State<AuthFormPage> {
                                         ],
                                         FilledButton(
                                           key: const ValueKey('auth-submit'),
-                                          onPressed: state.busy ? null : _save,
+                                          onPressed:
+                                              state.busy ||
+                                                  (!widget.register &&
+                                                      !_loginFieldsFilled)
+                                              ? null
+                                              : _save,
                                           style: FilledButton.styleFrom(
                                             backgroundColor: AuthPalette.green,
                                             foregroundColor: Colors.white,
@@ -575,7 +602,7 @@ class _AuthFormPageState extends State<AuthFormPage> {
                                                       final ok = await _submit
                                                           .run(
                                                             getIt<AuthCubit>()
-                                                                .changeUser,
+                                                                .changeRole,
                                                           );
                                                       if (ok &&
                                                           context.mounted) {
@@ -614,47 +641,45 @@ class _AuthFormPageState extends State<AuthFormPage> {
 
   Widget _loginPreferences(bool busy) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              SizedBox(
-                width: 28,
-                child: Checkbox(
-                  key: const ValueKey('auth-remember-me'),
-                  value: _rememberMe,
-                  onChanged: busy
-                      ? null
-                      : (value) => setState(() => _rememberMe = value ?? false),
-                  activeColor: AuthPalette.green,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  semanticLabel: 'Ingat saya',
-                ),
-              ),
-              const SizedBox(width: 6),
-              PlainTextAction(
-                key: const ValueKey('auth-remember-label'),
-                label: 'Ingat saya',
-                onPressed: busy
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final remember = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 28,
+              child: Checkbox(
+                key: const ValueKey('auth-remember-me'),
+                value: _rememberMe,
+                onChanged: busy
                     ? null
-                    : () => setState(() => _rememberMe = !_rememberMe),
-                color: AuthPalette.muted,
-                disabledColor: AuthPalette.muted,
-                minHeight: 48,
-                semanticLabel: 'Ingat saya',
-                textStyle: const TextStyle(
-                  color: AuthPalette.muted,
-                  fontSize: 13,
+                    : (value) => setState(() => _rememberMe = value ?? false),
+                activeColor: AuthPalette.green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
                 ),
+                semanticLabel: 'Ingat saya',
               ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        PlainTextAction(
+            ),
+            const SizedBox(width: 6),
+            PlainTextAction(
+              key: const ValueKey('auth-remember-label'),
+              label: 'Ingat saya',
+              onPressed: busy
+                  ? null
+                  : () => setState(() => _rememberMe = !_rememberMe),
+              color: AuthPalette.muted,
+              disabledColor: AuthPalette.muted,
+              minHeight: 48,
+              semanticLabel: 'Ingat saya',
+              textStyle: const TextStyle(
+                color: AuthPalette.muted,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        );
+        final forgot = PlainTextAction(
           key: const ValueKey('auth-forgot-password'),
           label: 'Lupa kata sandi?',
           onPressed: busy ? null : () => context.push('/forgot-password'),
@@ -667,8 +692,24 @@ class _AuthFormPageState extends State<AuthFormPage> {
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),
-        ),
-      ],
+        );
+        if (constraints.maxWidth < 360) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              remember,
+              Align(alignment: Alignment.centerRight, child: forgot),
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: remember),
+            const SizedBox(width: 12),
+            forgot,
+          ],
+        );
+      },
     ),
   );
 }

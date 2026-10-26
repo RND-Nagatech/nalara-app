@@ -33,6 +33,7 @@ class PlanModel {
     targetCount: json['targetCount'] ?? 0,
     studentName: json['studentName'] ?? '',
     subjectName: json['subjectName'] ?? '',
+    studentAvatarId: json['studentAvatarId'] as String?,
     targets: ((json['targets'] as List?) ?? [])
         .map((e) => TargetModel(Map<String, dynamic>.from(e)).toEntity())
         .toList(),

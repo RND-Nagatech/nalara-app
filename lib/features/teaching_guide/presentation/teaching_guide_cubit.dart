@@ -21,6 +21,12 @@ class TeachingGuideCubit extends Cubit<TeachingGuideState> {
   bool _reloadAfterSave = false;
   TeachingGuideCubit(this.repository) : super(const TeachingGuideState());
 
+  void reset() {
+    _generation++;
+    _reloadAfterSave = false;
+    if (!isClosed) emit(const TeachingGuideState());
+  }
+
   Future<void> load() async {
     if (isClosed) return;
     if (state.saving) {
@@ -41,15 +47,15 @@ class TeachingGuideCubit extends Cubit<TeachingGuideState> {
     }
   }
 
-  Future<void> setDismissed(bool dismissed) async {
+  Future<void> acknowledgeTutorial() async {
     final value = state.value;
     if (isClosed || state.busy || value == null) return;
     final generation = ++_generation;
     emit(TeachingGuideState(value: value, saving: true));
     try {
-      final saved = await repository.setDismissed(dismissed);
+      final saved = await repository.acknowledgeTutorial();
       if (!isClosed && generation == _generation) {
-        emit(TeachingGuideState(value: value.withDismissed(saved)));
+        emit(TeachingGuideState(value: value.withTutorialSeen(saved)));
       }
     } catch (error) {
       if (!isClosed && generation == _generation) {

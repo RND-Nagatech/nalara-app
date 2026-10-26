@@ -1,0 +1,7 @@
+# Copy this file to android/key.properties locally. Never commit the copy.
+# Generate a dedicated upload keystore for Play App Signing and keep the
+# keystore/passwords in a password manager or CI secret store.
+storePassword=replace-with-upload-keystore-password
+keyPassword=replace-with-upload-key-password
+keyAlias=upload
+storeFile=/absolute/path/to/nalara-upload-keystore.jks

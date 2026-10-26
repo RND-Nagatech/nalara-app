@@ -1,0 +1,69 @@
+:root {
+  color-scheme: light;
+  --nalara-cream: #fbf8f0;
+  --nalara-green: #155d49;
+  --nalara-muted: #697066;
+  --nalara-line: #e2e6dd;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  background: #e9ece7;
+  font-family: Arial, sans-serif;
+}
+
+.nalara-shell {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--nalara-cream);
+  box-shadow: 0 0 0 1px var(--nalara-line);
+}
+
+/* Keep a phone-like portrait canvas on wide screens, not a desktop dashboard.
+   Avoid changing mobile width as its virtual keyboard opens. */
+@media (min-width: 600px) {
+  .nalara-shell {
+    width: clamp(320px, 56.25svh, 430px);
+  }
+}
+
+#nalara-app, #nalara-loading {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#nalara-loading {
+  z-index: 2;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: var(--nalara-cream);
+  color: var(--nalara-muted);
+}
+
+#nalara-loading img { object-fit: contain; }
+#nalara-loading p { margin: 0; font-size: 13px; line-height: 1.6; }
+.nalara-spinner { width: 20px; height: 20px; border: 2px solid var(--nalara-line); border-top-color: var(--nalara-green); border-radius: 50%; animation: nalara-spin .8s linear infinite; }
+#nalara-reload { border: 1px solid var(--nalara-green); border-radius: 12px; padding: 11px 18px; background: transparent; color: var(--nalara-green); font: inherit; cursor: pointer; }
+#nalara-reload:focus-visible { outline: 2px solid var(--nalara-green); outline-offset: 3px; }
+@keyframes nalara-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .nalara-spinner { animation: none; } }
