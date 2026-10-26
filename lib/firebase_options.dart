@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -50,21 +47,26 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyA2EBYNRRcbhy9RBilZ1lXKbYkBqSwhdoo',
-    appId: '1:1009544957636:android:ec85716388f63a4f0f4391',
-    messagingSenderId: '1009544957636',
-    projectId: 'nalara-749db',
-    storageBucket: 'nalara-749db.firebasestorage.app',
+    apiKey: 'AIzaSyAlRZj6U0-wAC3moopbqaWQeTXUwSXRERo',
+    appId: '1:177575580722:android:356fd86ddc16d2da6cd82b',
+    messagingSenderId: '177575580722',
+    projectId: 'nalara-gia',
+    storageBucket: 'nalara-gia.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCuV_lnIRqBEZqXt_PqmrSO1_CIy0553Fo',
-    appId: '1:1009544957636:ios:17f7bfbc376fe8890f4391',
-    messagingSenderId: '1009544957636',
-    projectId: 'nalara-749db',
-    storageBucket: 'nalara-749db.firebasestorage.app',
-    iosClientId:
-        '1009544957636-brg49du6l90t4389u3jmqj1sugejnhsh.apps.googleusercontent.com',
+    apiKey: 'AIzaSyAOUa-apAKbMCJzJVbz8n15mvTvVtD0gJw',
+    appId: '1:177575580722:ios:b2c37968d277d2866cd82b',
+    messagingSenderId: '177575580722',
+    projectId: 'nalara-gia',
+    storageBucket: 'nalara-gia.firebasestorage.app',
     iosBundleId: 'id.nalara.nalara',
+  );
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAYTIAmif-ipHfGguuNCnENsixW3lVd6YE',
+    appId: '1:177575580722:web:eeb34b5b74ed48f16cd82b',
+    messagingSenderId: '177575580722',
+    projectId: 'nalara-gia',
+    authDomain: 'nalara-gia.firebaseapp.com',
+    storageBucket: 'nalara-gia.firebasestorage.app',
   );
 }

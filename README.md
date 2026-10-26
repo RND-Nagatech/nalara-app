@@ -124,6 +124,10 @@ Pengingat H-1/hari jatuh tempo dibuat backend untuk parent aktif, mengikuti Pro/
 
 ## Rilis Android ke Google Play
 
+Identitas Android sekarang **`id.giapp.nalara`** pada applicationId, namespace dan package/lokasi Kotlin MainActivity. iOS tetap **`id.nalara.nalara`**; nama paket Dart tetap `nalara`. APK/AAB yang sudah dibuat sebelumnya tetap beridentitas lama dan tidak berubah otomatis. Jika aplikasi lama telah diterbitkan, package baru adalah aplikasi Play yang berbeda, bukan update in-place; instalasi dan storage lokal juga terpisah.
+
+**Prasyarat Firebase belum selesai (26 Oktober 2026):** pemeriksaan read-only project `nalara-749db` hanya menemukan Android app dengan package lama. Sebelum build Android baru, daftarkan Android app `id.giapp.nalara` pada project Firebase yang sama, pasang `google-services.json` hasil unduhan resminya di `android/app/`, dan perbarui hanya Android FirebaseOptions di `lib/firebase_options.dart` dengan data app baru. Tambahkan fingerprint SHA-1/SHA-256 signing yang digunakan, termasuk app signing Play untuk login Google. Jangan mengedit sekadar package_name pada JSON lama atau mengarang Firebase appId; jangan mengubah client/iOS options. Sampai konfigurasi baru dipasang, Google Services plugin akan menolak package yang tidak cocok. Registrasi provider belum dilakukan otomatis; tidak ada build baru yang dijalankan.
+
 Konfigurasi release signing sudah disiapkan di `android/app/build.gradle.kts`.
 Sebelum membuat AAB:
 
