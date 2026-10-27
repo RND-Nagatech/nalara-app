@@ -5,13 +5,12 @@ importScripts(
 );
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyCIXGBwByUApP3MMMZK8A9DhRLlTxGqiYU',
-  authDomain: 'nalara-749db.firebaseapp.com',
-  projectId: 'nalara-749db',
-  storageBucket: 'nalara-749db.firebasestorage.app',
-  messagingSenderId: '1009544957636',
-  appId: '1:1009544957636:web:e9c52d4971683e880f4391',
-  measurementId: 'G-20JJK23SMW',
+  apiKey: 'AIzaSyAYTIAmif-ipHfGguuNCnENsixW3lVd6YE',
+  authDomain: 'nalara-gia.firebaseapp.com',
+  projectId: 'nalara-gia',
+  storageBucket: 'nalara-gia.firebasestorage.app',
+  messagingSenderId: '177575580722',
+  appId: '1:177575580722:web:eeb34b5b74ed48f16cd82b',
 });
 
 const messaging = firebase.messaging();

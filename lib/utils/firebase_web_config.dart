@@ -13,36 +13,37 @@ class FirebaseWebConfig {
   const FirebaseWebConfig({
     this.apiKey = const String.fromEnvironment(
       'FIREBASE_WEB_API_KEY',
-      defaultValue: 'AIzaSyCIXGBwByUApP3MMMZK8A9DhRLlTxGqiYU',
+      defaultValue: 'AIzaSyAYTIAmif-ipHfGguuNCnENsixW3lVd6YE',
     ),
     this.appId = const String.fromEnvironment(
       'FIREBASE_WEB_APP_ID',
-      defaultValue: '1:1009544957636:web:e9c52d4971683e880f4391',
+      defaultValue: '1:177575580722:web:eeb34b5b74ed48f16cd82b',
     ),
     this.messagingSenderId = const String.fromEnvironment(
       'FIREBASE_WEB_MESSAGING_SENDER_ID',
-      defaultValue: '1009544957636',
+      defaultValue: '177575580722',
     ),
     this.projectId = const String.fromEnvironment(
       'FIREBASE_WEB_PROJECT_ID',
-      defaultValue: 'nalara-749db',
+      defaultValue: 'nalara-gia',
     ),
     this.authDomain = const String.fromEnvironment(
       'FIREBASE_WEB_AUTH_DOMAIN',
-      defaultValue: 'nalara-749db.firebaseapp.com',
+      defaultValue: 'nalara-gia.firebaseapp.com',
     ),
     this.storageBucket = const String.fromEnvironment(
       'FIREBASE_WEB_STORAGE_BUCKET',
-      defaultValue: 'nalara-749db.firebasestorage.app',
+      defaultValue: 'nalara-gia.firebasestorage.app',
     ),
     this.vapidKey = const String.fromEnvironment(
       'FIREBASE_WEB_VAPID_KEY',
+      // Must be supplied from Firebase Console for project nalara-gia.
       defaultValue:
-          'BDLMfDrHg9gjd21mKhvmOQXn6NZi-o3D5hs7KXZV19UtGBe3VeIS4gWahUfPmKE_3-VcpNzYA8-IWSN76_3bbH0',
+          'BEtOyaNcdsXKHFYKoy2BlV4wTQ0gmLUywrOYCKGUSGetXQ-exKcqRZ15lXBWwZqcDJ5IpCPcXLm0FxKEn_E7Db8',
     ),
     this.measurementId = const String.fromEnvironment(
       'FIREBASE_WEB_MEASUREMENT_ID',
-      defaultValue: 'G-20JJK23SMW',
+      defaultValue: 'G-XXXXXXXXXX',
     ),
   });
 
