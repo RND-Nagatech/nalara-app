@@ -165,7 +165,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<int> requestPasswordReset(String email) async {
     final data = await remote.forgotPassword({'email': email.trim()});
     final expires = data['otpExpiresInSeconds'];
-    if (expires is num && expires > 0) return expires.toInt();
+    if (data['accepted'] == true && expires is num && expires > 0) {
+      return expires.toInt();
+    }
     throw const AppFailure(
       'OTP reset belum dikonfigurasi dengan benar.',
       code: 'INVALID_RESPONSE',

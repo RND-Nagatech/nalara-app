@@ -81,7 +81,12 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
                   context,
                   state.error!,
                   type: NalaraNoticeType.error,
-                  title: 'Password belum diperbarui',
+                  title: switch (state.step) {
+                    PasswordResetStep.email => 'OTP belum dikirim',
+                    PasswordResetStep.otp => 'OTP belum terverifikasi',
+                    PasswordResetStep.newPassword =>
+                      'Password belum diperbarui',
+                  },
                   duration: const Duration(milliseconds: 2800),
                 );
               }

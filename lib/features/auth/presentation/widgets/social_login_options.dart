@@ -12,9 +12,8 @@ class SocialLoginOptions extends StatelessWidget {
     children: [
       Expanded(
         child: _option(
-          'Google',
           const SizedBox.square(
-            dimension: 22,
+            dimension: 24,
             child: CustomPaint(painter: _GoogleMark()),
           ),
           onPressed: onGooglePressed,
@@ -23,28 +22,30 @@ class SocialLoginOptions extends StatelessWidget {
     ],
   );
 
-  Widget _option(String label, Widget icon, {VoidCallback? onPressed}) =>
-      Tooltip(
-        message: 'Masuk dengan $label',
-        child: OutlinedButton.icon(
-          key: ValueKey('auth-social-${label.toLowerCase()}'),
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(52),
-            backgroundColor: Colors.white.withValues(alpha: 0.85),
-            disabledForegroundColor: AuthPalette.ink,
-            side: BorderSide.none,
-            shape: const StadiumBorder(),
-            textStyle: const TextStyle(
-              fontFamily: 'NalaraInter',
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          icon: icon,
-          label: Text(label),
+  Widget _option(Widget icon, {VoidCallback? onPressed}) => Tooltip(
+    message: 'Masuk dengan Google',
+    child: OutlinedButton.icon(
+      key: const ValueKey('auth-social-google'),
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        backgroundColor: Colors.white.withValues(alpha: 0.96),
+        foregroundColor: AuthPalette.ink,
+        disabledForegroundColor: AuthPalette.ink,
+        elevation: 2,
+        shadowColor: AuthPalette.ink.withValues(alpha: 0.09),
+        side: BorderSide.none,
+        shape: const StadiumBorder(),
+        textStyle: const TextStyle(
+          fontFamily: 'NalaraInter',
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
         ),
-      );
+      ),
+      icon: icon,
+      label: const Text('Masuk dengan Google'),
+    ),
+  );
 }
 
 class _GoogleMark extends CustomPainter {

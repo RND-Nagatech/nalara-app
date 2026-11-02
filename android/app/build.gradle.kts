@@ -1,5 +1,6 @@
 import java.io.FileInputStream
 import java.util.Properties
+import groovy.json.JsonSlurper
 
 plugins {
     id("com.android.application")
@@ -94,10 +95,56 @@ android {
     }
 }
 
+val googleServicesFile = layout.projectDirectory.file("google-services.json")
+val releaseApplicationId = android.defaultConfig.applicationId
+val validateReleaseGoogleSignIn = tasks.register("validateReleaseGoogleSignIn") {
+    inputs.file(googleServicesFile).optional()
+    doLast {
+        val configFile = googleServicesFile.asFile
+        if (!configFile.isFile) {
+            throw GradleException(
+                "Google login release belum dikonfigurasi: android/app/google-services.json " +
+                    "tidak ditemukan. Unduh konfigurasi resmi Firebase untuk $releaseApplicationId."
+            )
+        }
+        val config = try {
+            JsonSlurper().parse(configFile) as? Map<*, *>
+        } catch (_: Exception) {
+            null
+        } ?: throw GradleException("google-services.json bukan konfigurasi JSON Firebase yang valid.")
+
+        val client = (config["client"] as? List<*>)
+            ?.filterIsInstance<Map<*, *>>()
+            ?.firstOrNull {
+                val info = it["client_info"] as? Map<*, *>
+                val androidInfo = info?.get("android_client_info") as? Map<*, *>
+                androidInfo?.get("package_name") == releaseApplicationId
+            } ?: throw GradleException(
+                "google-services.json tidak memuat aplikasi Android $releaseApplicationId. " +
+                    "Unduh konfigurasi aplikasi yang sesuai; jangan edit package_name secara manual."
+            )
+
+        val hasWebClient = (client["oauth_client"] as? List<*>)
+            ?.filterIsInstance<Map<*, *>>()
+            ?.any {
+                (it["client_type"] as? Number)?.toInt() == 3 &&
+                    (it["client_id"] as? String)?.endsWith(".apps.googleusercontent.com") == true
+            } == true
+        if (!hasWebClient) {
+            throw GradleException(
+                "Google login release belum siap: google-services.json untuk $releaseApplicationId " +
+                    "tidak memiliki Web OAuth client (client_type: 3). Aktifkan Google di Firebase " +
+                    "Authentication, daftarkan SHA-1 Play App Signing pada aplikasi Android tersebut, " +
+                    "lalu unduh ulang google-services.json ke android/app/."
+            )
+        }
+    }
+}
+
 tasks.matching {
-    it.name == "bundleRelease" || it.name == "assembleRelease"
+    it.name == "preReleaseBuild" || it.name == "bundleRelease" || it.name == "assembleRelease"
 }.configureEach {
-    dependsOn(validateReleaseSigning)
+    dependsOn(validateReleaseSigning, validateReleaseGoogleSignIn)
 }
 
 dependencies {

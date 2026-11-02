@@ -18,6 +18,7 @@ class GoogleAuthService {
   GoogleAuthService._(this._firebaseAuth, this._googleSignIn);
 
   Future<String> signIn() async {
+    var stage = 'initialize';
     try {
       User? firebaseUser;
       if (kIsWeb) {
@@ -27,6 +28,7 @@ class GoogleAuthService {
             code: 'GOOGLE_WEB_NOT_CONFIGURED',
           );
         }
+        stage = 'web-popup';
         final result = await firebaseAuth.signInWithPopup(
           GoogleAuthProvider()
             ..setCustomParameters({'prompt': 'select_account'}),
@@ -38,6 +40,7 @@ class GoogleAuthService {
           _initialized = true;
         }
 
+        stage = 'account-selection';
         final account = await googleSignIn.authenticate();
         final googleIdToken = account.authentication.idToken;
         if (googleIdToken == null || googleIdToken.isEmpty) {
@@ -47,11 +50,13 @@ class GoogleAuthService {
           );
         }
 
+        stage = 'firebase-auth';
         await firebaseAuth.signInWithCredential(
           GoogleAuthProvider.credential(idToken: googleIdToken),
         );
         firebaseUser = firebaseAuth.currentUser;
       }
+      stage = 'firebase-token';
       final firebaseIdToken = await firebaseUser?.getIdToken(true);
       if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
         throw const AppFailure(
@@ -63,10 +68,30 @@ class GoogleAuthService {
     } on AppFailure {
       rethrow;
     } on GoogleSignInException catch (error) {
-      if (error.code == GoogleSignInExceptionCode.canceled) {
+      // Keep release diagnostics useful without logging tokens or account data.
+      debugPrint(
+        'Google Sign-In gagal (tahap: $stage, kode: ${error.code.name}).',
+      );
+      if (error.code == GoogleSignInExceptionCode.clientConfigurationError ||
+          error.code == GoogleSignInExceptionCode.providerConfigurationError) {
         throw const AppFailure(
-          'Login Google dibatalkan.',
+          'Login Google belum tersedia pada versi aplikasi ini. '
+          'Silakan masuk menggunakan email atau nomor HP.',
+          code: 'GOOGLE_CONFIGURATION_ERROR',
+        );
+      }
+      if (error.code == GoogleSignInExceptionCode.canceled) {
+        // Android can also report configuration failures as canceled.
+        throw const AppFailure(
+          'Login Google belum selesai. Silakan coba lagi.',
           code: 'AUTH_CANCELLED',
+        );
+      }
+      if (error.code == GoogleSignInExceptionCode.interrupted ||
+          error.code == GoogleSignInExceptionCode.uiUnavailable) {
+        throw const AppFailure(
+          'Pilihan akun Google belum dapat dibuka. Silakan coba lagi.',
+          code: 'GOOGLE_UI_UNAVAILABLE',
         );
       }
       throw const AppFailure(
@@ -74,6 +99,22 @@ class GoogleAuthService {
         code: 'GOOGLE_SIGN_IN_FAILED',
       );
     } on FirebaseAuthException catch (error) {
+      debugPrint('Firebase Auth gagal (tahap: $stage, kode: ${error.code}).');
+      if (error.code == 'operation-not-allowed' ||
+          error.code == 'app-not-authorized' ||
+          error.code == 'invalid-api-key') {
+        throw const AppFailure(
+          'Login Google belum tersedia pada versi aplikasi ini. '
+          'Silakan masuk menggunakan email atau nomor HP.',
+          code: 'GOOGLE_CONFIGURATION_ERROR',
+        );
+      }
+      if (error.code == 'network-request-failed') {
+        throw const AppFailure(
+          'Tidak dapat terhubung ke Google. Periksa koneksi lalu coba lagi.',
+          code: 'GOOGLE_NETWORK_ERROR',
+        );
+      }
       if ([
         'popup-closed-by-user',
         'cancelled-popup-request',
@@ -99,7 +140,10 @@ class GoogleAuthService {
         'Login Firebase gagal. Coba lagi.',
         code: 'FIREBASE_AUTH_FAILED',
       );
-    } catch (_) {
+    } catch (error) {
+      debugPrint(
+        'Google Sign-In gagal (tahap: $stage, jenis: ${error.runtimeType}).',
+      );
       throw const AppFailure(
         'Login Google gagal. Coba lagi.',
         code: 'GOOGLE_SIGN_IN_FAILED',

@@ -1,7 +1,6 @@
 abstract final class AppLinks {
-  static const supportUrl = 'https://nalara-legal-apps.netlify.app/support/';
-  static const termsAndConditionsUrl =
-      'https://nalara-legal-apps.netlify.app/syarat-dan-ketentuan/';
-  static const privacyPolicyUrl =
-      'https://nalara-legal-apps.netlify.app/kebijakan-privasi/';
+  static const websiteBaseUrl = 'https://nalara.gi-app.id';
+  static const supportUrl = '$websiteBaseUrl/support/';
+  static const termsAndConditionsUrl = '$websiteBaseUrl/syarat-dan-ketentuan/';
+  static const privacyPolicyUrl = '$websiteBaseUrl/kebijakan-privasi/';
 }

@@ -9,6 +9,7 @@ import 'package:nalara/features/auth/presentation/pages/auth_form_page.dart';
 import 'package:nalara/features/auth/presentation/pages/legal_document_page.dart';
 import 'package:nalara/features/auth/presentation/widgets/auth_palette.dart';
 import 'package:nalara/features/auth/presentation/widgets/login_header.dart';
+import 'package:nalara/features/auth/presentation/widgets/login_backdrop.dart';
 import 'package:nalara/features/auth/presentation/widgets/plain_text_action.dart';
 import 'package:nalara/features/auth/presentation/widgets/terms_consent.dart';
 import 'package:nalara/utils/app_theme.dart';
@@ -161,7 +162,7 @@ Future<void> acceptTerms(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'login header grows with large text and keeps the method actions plain',
+    'login method pills remain tappable with large text on a narrow screen',
     (tester) async {
       tester.view.physicalSize = const Size(320, 640);
       tester.view.devicePixelRatio = 1;
@@ -189,6 +190,14 @@ void main() {
         ),
       );
       expect(find.text('Selamat datang kembali'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('auth-login-method-selector')),
+        findsOneWidget,
+      );
+      final emailButton = tester.widget<TextButton>(
+        find.byKey(const ValueKey('auth-login-tab-Email')),
+      );
+      expect(emailButton.style!.foregroundColor!.resolve({}), Colors.white);
       final phone = find.byKey(const ValueKey('auth-login-tab-Nomor HP'));
       await tester.ensureVisible(phone);
       await tester.tap(phone);
@@ -199,7 +208,7 @@ void main() {
   );
 
   testWidgets(
-    'login uses the register logo and real welcome text; safe bottom matches onboarding',
+    'login uses the logo, mockup copy, decorative backdrop and bottom safe area',
     (tester) async {
       await mountForm(tester);
       final image = tester.widget<Image>(
@@ -209,11 +218,31 @@ void main() {
       expect(image.fit, BoxFit.contain);
       expect(find.text('Selamat datang kembali'), findsOneWidget);
       expect(
-        find.text('Masuk untuk melanjutkan\nperjalanan belajar.'),
+        find.text('Masuk untuk melanjutkan\nperjalanan belajar di Nalara.'),
         findsOneWidget,
       );
       expect(find.byKey(const ValueKey('auth-login-header-art')), findsNothing);
       expect(find.byType(Image), findsOneWidget);
+      expect(find.byType(LoginBackdrop), findsOneWidget);
+      expect(
+        tester.widget<LoginBackdrop>(find.byType(LoginBackdrop)).showWaves,
+        isTrue,
+      );
+      expect(
+        find.descendant(
+          of: authField('submit'),
+          matching: find.byIcon(Icons.arrow_forward_rounded),
+        ),
+        findsNothing,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(authField('submit'))
+            .style!
+            .backgroundColor!
+            .resolve({}),
+        AuthPalette.green,
+      );
       expect(
         tester.getSize(find.byKey(const ValueKey('auth-login-header'))).height,
         lessThan(450),
@@ -224,11 +253,11 @@ void main() {
               find.byKey(const ValueKey('auth-form-background')),
             )
             .color,
-        AuthPalette.cream,
+        Colors.transparent,
       );
       expect(
         tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
-        AuthPalette.cream,
+        AuthPalette.loginCream,
       );
       expect(
         find.byWidgetPredicate(
@@ -514,6 +543,11 @@ void main() {
           .onPressed,
       isNotNull,
     );
+    expect(find.text('Masuk dengan Google'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('auth-social-google')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('auth-social-google')));
     await tester.pumpAndSettle();
     expect(harness.repository.googleCalls, 1);
@@ -522,6 +556,10 @@ void main() {
     'small screen and visible keyboard scroll without layout overflow',
     (tester) async {
       await mountForm(tester, size: const Size(320, 568), keyboard: 250);
+      expect(
+        tester.widget<LoginBackdrop>(find.byType(LoginBackdrop)).showWaves,
+        isFalse,
+      );
       await tester.ensureVisible(authField('password'));
       await tester.pumpAndSettle();
       await tester.enterText(authField('password'), 'StrongPassword123!');

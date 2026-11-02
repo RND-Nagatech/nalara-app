@@ -14,6 +14,7 @@ import '../../data/datasources/remembered_login_local_source.dart';
 import '../bloc/auth_cubit.dart';
 import '../widgets/auth_palette.dart';
 import '../widgets/login_header.dart';
+import '../widgets/login_backdrop.dart';
 import '../widgets/social_login_options.dart';
 import '../widgets/register_header.dart';
 import '../widgets/register_backdrop.dart';
@@ -169,26 +170,30 @@ class _AuthFormPageState extends State<AuthFormPage> {
     prefixIcon: Icon(icon, size: 22, color: AuthPalette.muted),
     hintStyle: const TextStyle(color: AuthPalette.muted, fontSize: 15),
     filled: true,
-    fillColor: Colors.white.withValues(alpha: 0.68),
+    fillColor: Colors.white.withValues(alpha: widget.register ? 0.68 : 0.88),
     counterText: '',
     contentPadding: EdgeInsets.symmetric(
       horizontal: 18,
-      vertical: widget.register ? 16 : 18,
+      vertical: widget.register ? 16 : 12,
     ),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: BorderSide.none,
+      borderRadius: BorderRadius.circular(widget.register ? 18 : 16),
+      borderSide: widget.register
+          ? BorderSide.none
+          : const BorderSide(color: Color(0xFFE3E3E1)),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
-      borderSide: BorderSide.none,
+      borderRadius: BorderRadius.circular(widget.register ? 18 : 16),
+      borderSide: widget.register
+          ? BorderSide.none
+          : const BorderSide(color: Color(0xFFE3E3E1)),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(widget.register ? 18 : 16),
       borderSide: const BorderSide(color: AuthPalette.green),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(widget.register ? 18 : 16),
       borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
     ),
     errorMaxLines: 3,
@@ -205,7 +210,11 @@ class _AuthFormPageState extends State<AuthFormPage> {
     child: AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
-        systemNavigationBarColor: AuthPalette.cream,
+        systemNavigationBarColor: widget.register
+            ? AuthPalette.cream
+            : MediaQuery.viewInsetsOf(context).bottom > 0
+            ? AuthPalette.loginCream
+            : AuthPalette.loginWaveBase,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Theme(
@@ -215,12 +224,20 @@ class _AuthFormPageState extends State<AuthFormPage> {
           ).textTheme.apply(fontFamily: 'NalaraInter'),
         ),
         child: Scaffold(
-          backgroundColor: AuthPalette.cream,
+          backgroundColor: widget.register
+              ? AuthPalette.cream
+              : AuthPalette.loginCream,
           body: Stack(
             children: [
               if (widget.register)
                 const Positioned.fill(
                   child: IgnorePointer(child: RegisterBackdrop()),
+                )
+              else
+                Positioned.fill(
+                  child: LoginBackdrop(
+                    showWaves: MediaQuery.viewInsetsOf(context).bottom == 0,
+                  ),
                 ),
               SafeArea(
                 // Each header owns its top system inset; form content scrolls.
@@ -245,6 +262,8 @@ class _AuthFormPageState extends State<AuthFormPage> {
                       constraints: const BoxConstraints(maxWidth: 480),
                       child: SingleChildScrollView(
                         key: const ValueKey('auth-scroll'),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -261,15 +280,13 @@ class _AuthFormPageState extends State<AuthFormPage> {
                               ),
                             ColoredBox(
                               key: const ValueKey('auth-form-background'),
-                              color: widget.register
-                                  ? Colors.transparent
-                                  : AuthPalette.cream,
+                              color: Colors.transparent,
                               child: Padding(
                                 padding: EdgeInsets.fromLTRB(
-                                  28,
-                                  widget.register ? 0 : 18,
-                                  28,
-                                  16,
+                                  widget.register ? 28 : 24,
+                                  widget.register ? 0 : 22,
+                                  widget.register ? 28 : 24,
+                                  widget.register ? 16 : 80,
                                 ),
                                 child: AutofillGroup(
                                   onDisposeAction: AutofillContextAction.cancel,
@@ -470,6 +487,9 @@ class _AuthFormPageState extends State<AuthFormPage> {
                                               widget.register ? 48 : 52,
                                             ),
                                             shape: const StadiumBorder(),
+                                            elevation: widget.register ? 0 : 2,
+                                            shadowColor: AuthPalette.green
+                                                .withValues(alpha: 0.18),
                                             textStyle: const TextStyle(
                                               fontFamily: 'NalaraInter',
                                               fontSize: 16,
@@ -508,7 +528,7 @@ class _AuthFormPageState extends State<AuthFormPage> {
                                         if (!widget.register) ...[
                                           const Padding(
                                             padding: EdgeInsets.symmetric(
-                                              vertical: 18,
+                                              vertical: 14,
                                             ),
                                             child: Row(
                                               children: [
@@ -525,6 +545,8 @@ class _AuthFormPageState extends State<AuthFormPage> {
                                                     'atau',
                                                     style: TextStyle(
                                                       color: AuthPalette.muted,
+                                                      fontSize: 14,
+                                                      height: 1.1,
                                                     ),
                                                   ),
                                                 ),
@@ -547,6 +569,7 @@ class _AuthFormPageState extends State<AuthFormPage> {
                                           alignment: WrapAlignment.center,
                                           crossAxisAlignment:
                                               WrapCrossAlignment.center,
+                                          spacing: widget.register ? 0 : 6,
                                           children: [
                                             Text(
                                               widget.register
@@ -576,7 +599,9 @@ class _AuthFormPageState extends State<AuthFormPage> {
                                                     ),
                                               color: AuthPalette.green,
                                               disabledColor: AuthPalette.green,
-                                              minHeight: 48,
+                                              minHeight: widget.register
+                                                  ? 48
+                                                  : 44,
                                               semanticLabel: widget.register
                                                   ? 'Masuk'
                                                   : 'Daftar Guru',
@@ -589,33 +614,63 @@ class _AuthFormPageState extends State<AuthFormPage> {
                                           ],
                                         ),
                                         if (!widget.register)
-                                          Align(
-                                            alignment: Alignment.center,
-                                            child: PlainTextAction(
-                                              key: const ValueKey(
-                                                'auth-change-role',
-                                              ),
-                                              label: 'Ganti peran',
-                                              onPressed: state.busy
-                                                  ? null
-                                                  : () async {
-                                                      final ok = await _submit
-                                                          .run(
-                                                            getIt<AuthCubit>()
-                                                                .changeRole,
-                                                          );
-                                                      if (ok &&
-                                                          context.mounted) {
-                                                        context.go('/roles');
-                                                      }
-                                                    },
-                                              color: AuthPalette.green,
-                                              disabledColor: AuthPalette.muted,
-                                              semanticLabel: 'Ganti peran',
-                                              textStyle: const TextStyle(
-                                                fontFamily: 'NalaraInter',
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 8,
+                                            ),
+                                            child: Align(
+                                              alignment: Alignment.center,
+                                              child: TextButton.icon(
+                                                key: const ValueKey(
+                                                  'auth-change-role',
+                                                ),
+                                                onPressed: state.busy
+                                                    ? null
+                                                    : () async {
+                                                        final ok = await _submit
+                                                            .run(
+                                                              getIt<AuthCubit>()
+                                                                  .changeRole,
+                                                            );
+                                                        if (ok &&
+                                                            context.mounted) {
+                                                          context.go('/roles');
+                                                        }
+                                                      },
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor:
+                                                      AuthPalette.green,
+                                                  disabledForegroundColor:
+                                                      AuthPalette.muted,
+                                                  backgroundColor: AuthPalette
+                                                      .green
+                                                      .withValues(alpha: 0.09),
+                                                  minimumSize: const Size(
+                                                    0,
+                                                    40,
+                                                  ),
+                                                  tapTargetSize:
+                                                      MaterialTapTargetSize
+                                                          .shrinkWrap,
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 22,
+                                                        vertical: 9,
+                                                      ),
+                                                  shape: const StadiumBorder(),
+                                                  textStyle: const TextStyle(
+                                                    fontFamily: 'NalaraInter',
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.swap_horiz_rounded,
+                                                  size: 22,
+                                                ),
+                                                label: const Text(
+                                                  'Ganti peran',
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -643,6 +698,27 @@ class _AuthFormPageState extends State<AuthFormPage> {
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: LayoutBuilder(
       builder: (context, constraints) {
+        const rememberStyle = TextStyle(
+          fontFamily: 'NalaraInter',
+          color: AuthPalette.muted,
+          fontSize: 13,
+        );
+        const forgotStyle = TextStyle(
+          fontFamily: 'NalaraInter',
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        );
+        double labelWidth(String text, TextStyle style) {
+          final painter = TextPainter(
+            text: TextSpan(text: text, style: style),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout();
+          final width = painter.width.ceilToDouble();
+          painter.dispose();
+          return width;
+        }
+
         final remember = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -672,10 +748,7 @@ class _AuthFormPageState extends State<AuthFormPage> {
               disabledColor: AuthPalette.muted,
               minHeight: 48,
               semanticLabel: 'Ingat saya',
-              textStyle: const TextStyle(
-                color: AuthPalette.muted,
-                fontSize: 13,
-              ),
+              textStyle: rememberStyle,
             ),
           ],
         );
@@ -687,13 +760,15 @@ class _AuthFormPageState extends State<AuthFormPage> {
           disabledColor: AuthPalette.muted,
           minHeight: 48,
           semanticLabel: 'Lupa kata sandi',
-          textStyle: const TextStyle(
-            fontFamily: 'NalaraInter',
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
+          textStyle: forgotStyle,
         );
-        if (constraints.maxWidth < 360) {
+        final requiredWidth =
+            28 +
+            6 +
+            labelWidth('Ingat saya', rememberStyle) +
+            12 +
+            labelWidth('Lupa kata sandi?', forgotStyle);
+        if (constraints.maxWidth < requiredWidth) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

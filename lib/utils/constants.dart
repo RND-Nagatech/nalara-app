@@ -2,9 +2,13 @@ import 'package:flutter/foundation.dart';
 
 abstract final class ApiConstants {
   static const prefix = '/api/v1';
-  static const androidDevBaseUrl = 'http://192.168.31.125:3100$prefix';
-  static const iosDevBaseUrl = 'http://localhost:3100$prefix';
-  static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static const productionBaseUrl = 'https://nalara.gi-app.id$prefix';
+  static const androidDevBaseUrl = productionBaseUrl;
+  static const iosDevBaseUrl = productionBaseUrl;
+  static const _configuredBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: productionBaseUrl,
+  );
 
   static String get baseUrl {
     if (const bool.fromEnvironment('dart.vm.product')) {

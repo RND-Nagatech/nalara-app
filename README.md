@@ -48,7 +48,19 @@ UTC occurrence, zona seri dan pola repeat existing tidak diubah. Kalender/berand
 
 ## Logo dan teks sambutan login
 
-Login memakai `assets/Logo/LOGO.png` seperti Register (BoxFit.contain, 198×132), dengan judul `Selamat datang kembali` dan subjudul `Masuk untuk melanjutkan perjalanan belajar.` sebagai widget Text, bukan tulisan yang dibakar pada gambar Login.png. Copy mengikuti artwork login lama; aset lama tidak dihapus. Header mengikuti tinggi konten, SafeArea dan text scaling; Email/Nomor HP tetap PlainTextAction tanpa background dan underline. Form, remember-me, disabled login kosong, Google, lupa sandi, Register/legal dan API/auth flow tidak diubah. Hot reload/restart memuat UI baru.
+Login mengikuti mockup terbaru 2 November 2026: latar krem terang, dua bidang lengkung sage di pojok kanan atas dan dua lapis ombak bawah melalui `LoginBackdrop`. Dekorasi tidak menangkap sentuhan/tidak dibaca screen reader; ombak disembunyikan ketika keyboard terbuka dan warna navigation bar bawah mengikuti ujung ombak. Form transparan dengan inset horizontal 24 dan ruang bawah, tetap di dalam scroll/SafeArea.
+
+Logo tetap `assets/Logo/LOGO.png` (BoxFit.contain, 192×128), judul Inter tebal `Selamat datang kembali` dan subjudul `Masuk untuk melanjutkan perjalanan belajar di Nalara.` merupakan Text yang mengikuti text scaling. Pilihan Email/Nomor HP sekarang berbentuk segmented pill dengan ikon outline dan latar hijau pada pilihan aktif, tanpa underline; pergantian mempertahankan controller email/nomor/sandi dan status Ingat saya. Dua pill memiliki ukuran ketuk minimal 48 dan tinggi bertambah mengikuti label saat teks diperbesar.
+
+Input putih berbingkai abu tipis, Lupa kata sandi di kanan ketika kedua label muat pada lebar/text scaling aktual, dan Ingat saya tetap dekat checkbox. Tombol Masuk mempertahankan `AuthPalette.green`, hanya label tanpa panah. Google memakai label `Masuk dengan Google`; Ganti peran memakai pill sage dengan ikon pertukaran. Loading, disabled saat kosong/busy, pesan backend, Google/Firebase, autofill, remember-me, Register/legal dan route existing tetap. Perubahan desain tidak memodifikasi konfigurasi OAuth atau register layout. Verifikasi runtime/perangkat tidak dijalankan otomatis; muat ulang aplikasi untuk melihat perubahan.
+
+## Pemeriksaan email lupa kata sandi
+
+Pemeriksaan akun dilakukan backend pada `POST /auth/forgot-password`. Email belum terdaftar mendapat `404 EMAIL_NOT_REGISTERED` dengan pesan `Maaf, email belum terdaftar.`; Flutter menampilkan pesan tersebut melalui notifikasi NALARA dan tetap di form email dengan input tersimpan. Judul notifikasi mengikuti langkah aktif: OTP belum dikirim, OTP belum terverifikasi, atau Password belum diperbarui.
+
+Repository hanya menerima respons `accepted: true` dengan TTL positif sebelum menyimpan draft OTP dan berpindah ke halaman OTP. Kegagalan validasi, cooldown, penyimpanan MongoDB atau pengiriman email tidak memajukan langkah. OTP/reset token kini memakai MongoDB, tanpa ketergantungan Redis; payload dan penampilan error backend tetap sama, sehingga perubahan ini tidak memerlukan APK baru. Deploy backend terbaru ke semua instance dan restart; setelah perpindahan pengguna perlu meminta OTP baru karena challenge/token Redis lama tidak dimigrasikan. Draft lokal yang berisi token lama bukan bukti token masih berlaku di server.
+
+Pengiriman Resend sebenarnya sepenuhnya dikonfigurasi backend, tanpa API key di Flutter. Production memakai domain pengirim terverifikasi dan tanpa recipient testing; server memerlukan ID email dari Resend sebelum mengembalikan sukses. ID/accepted tidak menjamin inbox delivery. Pembetulan sender `.env` lokal harus diterapkan juga pada environment API publik; lihat [konfigurasi pengiriman OTP backend](../backend_bimbel/README.md#resend-untuk-pengiriman-otp-sebenarnya).
 
 ## Pengajuan perubahan jadwal Orang Tua
 
@@ -126,7 +138,21 @@ Pengingat H-1/hari jatuh tempo dibuat backend untuk parent aktif, mengikuti Pro/
 
 Identitas Android sekarang **`id.giapp.nalara`** pada applicationId, namespace dan package/lokasi Kotlin MainActivity. iOS tetap **`id.nalara.nalara`**; nama paket Dart tetap `nalara`. APK/AAB yang sudah dibuat sebelumnya tetap beridentitas lama dan tidak berubah otomatis. Jika aplikasi lama telah diterbitkan, package baru adalah aplikasi Play yang berbeda, bukan update in-place; instalasi dan storage lokal juga terpisah.
 
-**Prasyarat Firebase belum selesai (26 Oktober 2026):** pemeriksaan read-only project `nalara-749db` hanya menemukan Android app dengan package lama. Sebelum build Android baru, daftarkan Android app `id.giapp.nalara` pada project Firebase yang sama, pasang `google-services.json` hasil unduhan resminya di `android/app/`, dan perbarui hanya Android FirebaseOptions di `lib/firebase_options.dart` dengan data app baru. Tambahkan fingerprint SHA-1/SHA-256 signing yang digunakan, termasuk app signing Play untuk login Google. Jangan mengedit sekadar package_name pada JSON lama atau mengarang Firebase appId; jangan mengubah client/iOS options. Sampai konfigurasi baru dipasang, Google Services plugin akan menolak package yang tidak cocok. Registrasi provider belum dilakukan otomatis; tidak ada build baru yang dijalankan.
+**Status Google login (2 November 2026):** unduhan pengguna `google-services (1).json` telah dipasang utuh ke `android/app/google-services.json`. Konfigurasi project `nalara-gia`/package `id.giapp.nalara` sekarang berisi satu Android OAuth client (type 1) dan satu Web OAuth client (type 3). API key, appId, senderId, projectId dan storageBucket cocok dengan Android FirebaseOptions yang ada, sehingga file Dart tidak perlu digenerasi ulang. Salinan unduhan tetap dipertahankan. Hasil build debug lama masih berisi OAuth dari project `nalara-749db`; artefak lama bukan bukti konfigurasi terbaru sudah dipakai. Sesi Firebase CLI kedaluwarsa, sehingga fingerprint Play/provider di console dan login perangkat belum diverifikasi langsung.
+
+Sebelum AAB berikutnya:
+
+**Pembaruan konfigurasi Play pada tanggal yang sama:** unduhan terbaru `/Users/ngtc/Downloads/google-services (1).json` sudah menggantikan file Android aktif. Android OAuth client kini memakai SHA-1 `77:17:08:BD:FE:A3:E7:42:A6:8D:23:8D:08:86:F4:17:B9:91:EE:7B`, sesuai fingerprint Play yang diberikan pengguna, menggantikan entry upload lokal `78:0A:74:…` pada salinan sebelumnya. Web OAuth client dan Android FirebaseOptions tetap cocok; isi JSON aktif sama dengan unduhan resmi. File JSON bukan daftar lengkap status console: bila signing debug/upload juga diperlukan, pertahankan/daftarkan fingerprint tersebut melalui Firebase, bukan dengan menggabungkan OAuth entry secara manual. SHA-256 dan sertifikat APK terpasang belum diperiksa langsung. `flutter analyze --no-pub` bersih; login Play nyata tetap perlu diuji.
+
+1. Pada Firebase project `nalara-gia`, aktifkan **Authentication → Sign-in method → Google**.
+2. Pada pengaturan Android app `id.giapp.nalara`, daftarkan SHA-1 dan SHA-256 dari **App signing key certificate** di Play Console, selain fingerprint debug/upload yang dipakai lokal. Sertifikat upload AAB tidak membuktikan sertifikat APK distribusi Play sudah terdaftar.
+3. Unduh ulang konfigurasi resmi `google-services.json` ke `android/app/`. Entri client Android harus berisi Web OAuth client (`client_type: 3`); `GoogleSignIn.initialize()` membacanya melalui resource `default_web_client_id` yang dibuat Google Services plugin. Jangan memasukkan Android client ID atau Firebase appId sebagai penggantinya.
+4. Pastikan project Firebase Admin pada deployment backend sama dengan project aplikasi. Jangan mengganti service account atau project backend otomatis hanya untuk menghilangkan error login. Kontrak tetap Firebase ID token ke `POST /api/v1/auth/google`.
+5. Naikkan version code ke angka yang belum digunakan, build AAB baru, upload ke jalur pengujian, lalu uji instalasi dari Play. Artefak lama tidak berubah ketika source/config lokal diedit.
+
+Task `validateReleaseGoogleSignIn` memeriksa file JSON, package Android dan keberadaan Web OAuth client sebelum `preReleaseBuild`/`assembleRelease`/`bundleRelease`. Pemeriksaan struktur JSON unduhan terbaru memenuhi persyaratan tersebut; task Gradle belum dieksekusi. Pemeriksaan ini lokal: tidak memverifikasi provider Google, fingerprint Play, akses jaringan atau keberhasilan login perangkat.
+
+Error SDK konfigurasi ditampilkan sebagai `GOOGLE_CONFIGURATION_ERROR`, bukan error backend. Kode SDK `canceled` tetap `AUTH_CANCELLED`, tetapi pesannya netral karena Android juga dapat menggunakannya untuk konfigurasi yang salah. Log hanya menyebut tahap dan kode/jenis error; token, email, raw SDK description dan account tidak dicatat. Constructor GoogleAuthService tetap lazy dan login web/iOS tetap memakai alur existing.
 
 Konfigurasi release signing sudah disiapkan di `android/app/build.gradle.kts`.
 Sebelum membuat AAB:
@@ -138,7 +164,7 @@ Sebelum membuat AAB:
 5. Daftarkan SHA-1/SHA-256 upload key dan app signing key Play Console pada Firebase untuk Google Login.
 
 File `key.properties` dan `.jks` sudah di-ignore Git. Build release akan dihentikan
-dengan pesan yang jelas jika konfigurasi signing atau file keystore belum tersedia.
+dengan pesan yang jelas jika konfigurasi signing, file keystore atau Web OAuth client belum tersedia.
 
 Saat siap membuat artefak release:
 
@@ -291,11 +317,13 @@ flutter pub get
 flutter run -d chrome --web-port=8080 --dart-define=API_BASE_URL=http://localhost:3100/api/v1
 ```
 
-Backend harus sudah berjalan; petunjuknya ada di [../backend_bimbel/README.md](../backend_bimbel/README.md). Flutter memakai compile-time `API_BASE_URL` yang sudah mencakup `/api/v1`, bukan `.env` dengan secret. Default Android emulator adalah `http://10.0.2.2:3100/api/v1`, perangkat Android fisik development memakai `http://192.168.31.125:3100/api/v1`, dan web/iOS memakai localhost. Untuk release, tetapkan URL HTTPS API yang dapat dijangkau perangkat.
+Flutter memakai compile-time `API_BASE_URL` yang sudah mencakup `/api/v1`, bukan `.env` dengan secret. Default seluruh platform adalah produksi `https://nalara.gi-app.id/api/v1`, sehingga build tanpa `--dart-define` tidak lagi gagal karena URL kosong. Untuk development lokal, override secara eksplisit: Android emulator `http://10.0.2.2:3100/api/v1`, perangkat fisik IP LAN laptop dengan port `3100`, atau web/iOS `http://localhost:3100/api/v1`. Backend lokal harus berjalan saat memakai override tersebut; petunjuknya ada di [../backend_bimbel/README.md](../backend_bimbel/README.md). Release tetap menolak override non-HTTPS. URL backend adalah nilai default/override, bukan nama variabel `String.fromEnvironment`; nama variabel harus tetap `API_BASE_URL`.
 
 ```sh
 flutter run --dart-define=API_BASE_URL=https://api.example.com/api/v1
 ```
+
+Backend menampilkan konfirmasi `API listening on port <PORT>` dan URL API/health setelah listener berhasil siap, termasuk saat `LOG_LEVEL=warn`. Konfirmasi startup ini terpisah dari filter log request dan tidak membuktikan layanan email/push sudah berhasil mengirim. Perubahan banner pada source backend memerlukan build ulang dan restart backend untuk mode `npm start`; tidak memerlukan perubahan aplikasi Flutter.
 
 Tidak ada token/password produksi pada kode atau asset. Token acak diperoleh dari backend dan disimpan secure storage. Browser localhost hanya untuk preview; deployment web produksi membutuhkan HTTPS dan penilaian keamanan sesi browser tersendiri. Android debug memperbolehkan cleartext hanya untuk host emulator/localhost; release memerlukan HTTPS. iOS memperbolehkan local networking untuk development, tanpa menonaktifkan ATS secara global.
 
@@ -335,7 +363,7 @@ Tab login mempertahankan input email/nomor masing-masing dan mengirim field berd
 
 Register juga mewajibkan checkbox persetujuan Syarat & Ketentuan dan Kebijakan Privasi. Kedua dokumen dapat dibuka langsung pada route legal in-app; versi static publiknya tersedia di folder `../legal/`.
 
-Teks dokumen legal pada checkbox register membuka halaman publik NALARA di https://nalara-legal-apps.netlify.app/. Route legal in-app tetap tersedia sebagai fallback.
+Teks dokumen legal pada checkbox register membuka halaman publik NALARA di https://nalara.gi-app.id/. `AppLinks.websiteBaseUrl` memusatkan domain web; syarat memakai `/syarat-dan-ketentuan/`, kebijakan `/kebijakan-privasi/`, dan Hubungi support NALARA memakai `/support/`. Path tetap sama seperti sebelumnya dan tidak ada tautan Netlify dalam source aplikasi. Route legal in-app tetap tersedia sebagai fallback. Perubahan tautan baru dipakai instalasi yang menyertakan source terbaru.
 
 ## Form Buat rencana & target
 
